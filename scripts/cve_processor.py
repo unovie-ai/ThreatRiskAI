@@ -107,35 +107,38 @@ def process_cve(json_file_path, platform):
 
 def main():
     """
-    Main function to demonstrate the CVE processing script.
+    Main function to execute CVE processing.
     """
-    # Example usage:
-    json_file_path = "data/cve.json"  # Replace with your actual file path
-    platform = "containers"
-    output_dir = "temp"
+    parser = argparse.ArgumentParser(description="Process CVE JSON files for a specific platform.")
+    parser.add_argument("json_file_path", help="Path to the CVE JSON file")
+    parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
+    parser.add_argument("--output_dir", default="output", help="Directory to save processed CVE data (default: output)")
+    args = parser.parse_args()
+
+    output_dir = args.output_dir
 
     # Create the output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     # Extract filename from path
-    file_name = os.path.basename(json_file_path)
+    file_name = os.path.basename(args.json_file_path)
     output_file_path = os.path.join(output_dir, file_name)
 
-
     try:
-        logging.info(f"Starting CVE processing for {json_file_path}")
-        processed_data = process_cve(json_file_path, platform)
+        logging.info(f"Starting CVE processing for {args.json_file_path}")
+        processed_data = process_cve(args.json_file_path, args.platform)
 
         if processed_data is not None:
-            logging.info(f"Found relevant CVE {processed_data.get('cveMetadata', {}).get('cveId')} for platform {platform}")
+            cve_id = processed_data.get('cveMetadata', {}).get('cveId', 'Unknown CVE ID')
+            logging.info(f"Found relevant CVE {cve_id} for platform {args.platform}")
             with open(output_file_path, "w") as outfile:
                 json.dump(processed_data, outfile, indent=4)
             print(f"Processed data saved to: {output_file_path}")
         else:
-            logging.warning(f"No relevant CVEs found in {json_file_path} for platform {platform}")
+            logging.warning(f"No relevant CVEs found in {args.json_file_path} for platform {args.platform}")
             print("No relevant CVEs found.")
-            
+
     except Exception as e:
         logging.error(f"Failed to process CVE file: {str(e)}", exc_info=True)
         print(f"Error processing CVE file: {str(e)}")
