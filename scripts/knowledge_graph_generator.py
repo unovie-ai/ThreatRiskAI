@@ -35,21 +35,23 @@ def create_knowledge_graph(json_file_path):
 
     G = nx.Graph()
 
-    # Example: Assuming the JSON structure has a list of objects with 'id' and 'related_to' fields
-    # Modify this part based on your actual JSON structure
-    for item in data.get("objects", []):
-        node_id = item.get("id")
-        if node_id:
-            G.add_node(node_id, **item)  # Add node attributes from the item
+    # Extract CVE ID as the central node
+    cve_id = data.get("cveMetadata", {}).get("cveId", "Unknown CVE")
+    G.add_node(cve_id, type="cve", **data.get("cveMetadata", {}))
 
-            # Add edges based on 'related_to' field (if it exists)
-            related_to = item.get("related_to")
-            if related_to:
-                if isinstance(related_to, list):
-                    for target_id in related_to:
-                        G.add_edge(node_id, target_id)
-                else:
-                    G.add_edge(node_id, related_to)
+    # Extract affected products and add them as nodes
+    affected_products = data.get("containers", {}).get("cna", {}).get("affected", [])
+    for product in affected_products:
+        product_name = product.get("product", "Unknown Product")
+        G.add_node(product_name, type="product", **product)
+        G.add_edge(cve_id, product_name, relation="affects")
+
+    # Extract descriptions and add them as nodes
+    descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
+    for description in descriptions:
+        description_text = description.get("value", "No Description")
+        G.add_node(description_text, type="description", **description)
+        G.add_edge(cve_id, description_text, relation="describes")
 
     return G
 
@@ -72,11 +74,20 @@ def save_knowledge_graph(graph, base_filename):
     edges_path = f"{base_filename}_edges.csv"
 
     # Save nodes with attributes
-    with open(nodes_path, "w") as f:
-        f.write("id," + ",".join(list(graph.nodes[next(iter(graph.nodes()))].keys())) + "\n")  # Header
-        for node_id, attributes in graph.nodes(data=True):
-            f.write(str(node_id) + "," + ",".join(str(value) for value in attributes.values()) + "\n")
-    logging.info(f"Knowledge graph nodes saved as CSV: {nodes_path}")
+    if graph.number_of_nodes() > 0:
+        with open(nodes_path, "w") as f:
+            first_node = next(iter(graph.nodes(data=True)))[1]
+            if first_node:
+                header = "id," + ",".join(first_node.keys()) + "\n"
+            else:
+                header = "id\n"
+            f.write(header)  # Header
+            for node_id, attributes in graph.nodes(data=True):
+                values = [str(node_id)] + [str(value) for value in attributes.values()]
+                f.write(",".join(values) + "\n")
+        logging.info(f"Knowledge graph nodes saved as CSV: {nodes_path}")
+    else:
+        logging.warning("Graph has no nodes, skipping CSV node creation")
 
     # Save edges
     with open(edges_path, "w") as f:
