@@ -31,9 +31,15 @@ def process_cve(json_file_path, platform):
         logging.error(f"Invalid JSON format in: {json_file_path}")
         return None
 
+    # Validate CVE structure
+    if not cve_data.get("containers", {}).get("cna", {}).get("affected"):
+        logging.error(f"Invalid CVE format in {json_file_path}: Missing containers.cna.affected section")
+        return None
+        
     # Check if the CVE is rejected
+    cve_id = cve_data.get("cveMetadata", {}).get("cveId", "Unknown CVE")
     if cve_data.get("cveMetadata", {}).get("state") == "REJECTED":
-        logging.debug(f"CVE {cve_data.get('cveMetadata', {}).get('cveId', 'Unknown CVE')} is rejected, ignoring.")
+        logging.info(f"CVE {cve_id} is rejected, ignoring")
         return None
 
     # Extract CVE ID for logging
@@ -80,19 +86,23 @@ def process_cve(json_file_path, platform):
                 return True
         return False
 
-    # Perform the checks
+    # Perform the checks with detailed logging
+    logging.info(f"Processing CVE {cve_id} for platform {platform}")
+    
     if primary_check(cve_data, platform):
-        logging.debug(f"CVE {cve_id} passed primary check for platform: {platform}")
+        logging.info(f"CVE {cve_id} passed primary platform check")
         return cve_data
-    elif secondary_check(cve_data, platform):
-        logging.debug(f"CVE {cve_id} passed secondary check for platform: {platform}")
+        
+    if secondary_check(cve_data, platform):
+        logging.info(f"CVE {cve_id} passed secondary product/vendor name check")
         return cve_data
-    elif tertiary_check(cve_data, platform):
-        logging.debug(f"CVE {cve_id} passed tertiary check for platform: {platform}")
+        
+    if tertiary_check(cve_data, platform):
+        logging.info(f"CVE {cve_id} passed tertiary description check")
         return cve_data
-    else:
-        logging.debug(f"CVE {cve_id} ignored: No platform match found for {platform}")
-        return None
+
+    logging.info(f"CVE {cve_id} does not match platform {platform} in any check")
+    return None
 
 
 def main():
@@ -112,55 +122,23 @@ def main():
     file_name = os.path.basename(json_file_path)
     output_file_path = os.path.join(output_dir, file_name)
 
-    # Create a dummy cve.json file for testing
-    if not os.path.exists("data"):
-        os.makedirs("data")
-    if not os.path.exists(json_file_path):
-        with open(json_file_path, "w") as f:
-            json.dump({
-                "dataType": "CVE_RECORD",
-                "dataVersion": "5.0",
-                "cveMetadata": {
-                    "cveId": "CVE-2023-12345",
-                    "assignerOrgId": "example",
-                    "state": "PUBLISHED"
-                },
-                "containers": {
-                    "cna": {
-                        "providerMetadata": {
-                            "orgId": "example"
-                        },
-                        "descriptions": [
-                            {
-                                "lang": "en",
-                                "value": "A vulnerability in a containerized application."
-                            }
-                        ],
-                        "affected": [
-                            {
-                                "product": "MyContainerApp",
-                                "vendor": "MyVendor",
-                                "platforms": ["containers"]
-                            }
-                        ],
-                        "references": [
-                            {
-                                "url": "http://example.com"
-                            }
-                        ]
-                    }
-                }
-            }, f)
 
-    processed_data = process_cve(json_file_path, platform)
+    try:
+        logging.info(f"Starting CVE processing for {json_file_path}")
+        processed_data = process_cve(json_file_path, platform)
 
-    if processed_data is not None:
-        # Save the processed data to the output file
-        with open(output_file_path, "w") as outfile:
-            json.dump(processed_data, outfile, indent=4)
-        print(f"Processed data saved to: {output_file_path}")
-    else:
-        print("No relevant CVEs found.")
+        if processed_data is not None:
+            logging.info(f"Found relevant CVE {processed_data.get('cveMetadata', {}).get('cveId')} for platform {platform}")
+            with open(output_file_path, "w") as outfile:
+                json.dump(processed_data, outfile, indent=4)
+            print(f"Processed data saved to: {output_file_path}")
+        else:
+            logging.warning(f"No relevant CVEs found in {json_file_path} for platform {platform}")
+            print("No relevant CVEs found.")
+            
+    except Exception as e:
+        logging.error(f"Failed to process CVE file: {str(e)}", exc_info=True)
+        print(f"Error processing CVE file: {str(e)}")
 
 
 if __name__ == "__main__":
