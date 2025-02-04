@@ -106,14 +106,15 @@ def create_mitre_knowledge_graph(json_file_path):
     G.add_node(mitre_id, **data)
 
     # Extract techniques and add them as nodes
-    techniques = data.get("techniques", [])
+    objects = data.get("objects", [])
+    techniques = [obj for obj in objects if obj.get("type") == "attack-pattern"]
     for technique in techniques:
-        add_technique_and_subtechniques(G, mitre_id, technique)
+        add_technique_and_subtechniques(G, mitre_id, technique, objects)
 
     return G
 
 
-def add_technique_and_subtechniques(graph, parent_id, technique):
+def add_technique_and_subtechniques(graph, parent_id, technique, objects):
     """
     Recursively adds a technique and its sub-techniques to the knowledge graph.
 
@@ -121,15 +122,20 @@ def add_technique_and_subtechniques(graph, parent_id, technique):
         graph (networkx.Graph): The knowledge graph.
         parent_id (str): The ID of the parent node (MITRE ID or parent technique).
         technique (dict): The technique data.
+        objects (list): List of all objects in the MITRE ATT&CK data.
     """
+    technique_id = technique.get("id")
     technique_name = technique.get("name", "Unknown Technique")
     graph.add_node(technique_name, type="technique", **technique)
     graph.add_edge(parent_id, technique_name, relation="contains")
 
-    # Extract sub-techniques and recursively add them
-    sub_techniques = technique.get("techniques", [])
-    for sub_technique in sub_techniques:
-        add_technique_and_subtechniques(graph, technique_name, sub_technique)
+    # Find sub-techniques
+    sub_techniques_relationships = [obj for obj in objects if obj.get("type") == "relationship" and obj.get("source_ref") == technique_id and obj.get("relationship_type") == "subtechnique-of"]
+    for relationship in sub_techniques_relationships:
+        sub_technique_id = relationship.get("target_ref")
+        sub_technique = next((obj for obj in objects if obj.get("id") == sub_technique_id), None)
+        if sub_technique:
+            add_technique_and_subtechniques(graph, technique_name, sub_technique, objects)
 
 
 def save_knowledge_graph(graph, base_filename):
