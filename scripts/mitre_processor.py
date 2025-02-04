@@ -10,6 +10,13 @@ PLATFORM_MAPPING = {
     "containers": ["container", "containers", "docker", "podman", "kubernetes"]
 }
 
+
+def normalize_platform(platform):
+    """
+    Converts the platform to lowercase for case-insensitive comparison.
+    """
+    return platform.lower() if platform else ""
+
 def process_mitre(json_file_path, platform):
     """
     Processes a MITRE ATT&CK JSON file, filtering techniques based on the specified platform.
@@ -54,16 +61,16 @@ def process_mitre(json_file_path, platform):
         object_platforms = mitre_object.get("x_mitre_platforms", [])
 
         if not object_platforms:
-            if "all" in object_platforms:
-                logging.debug(f"Technique {mitre_object.get('name')} retained due to platform match: all")
-                return True
+            logging.debug(f"Technique {mitre_object.get('name')} excluded: Missing x_mitre_platforms")
             return False
 
         for expanded_platform in expanded_platforms:
-            if expanded_platform in object_platforms:
-                logging.debug(f"Technique {mitre_object.get('name')} retained due to platform match: {expanded_platform}")
-                return True
+            for object_platform in object_platforms:
+                if normalize_platform(object_platform) == normalize_platform(expanded_platform):
+                    logging.debug(f"Technique {mitre_object.get('name')} retained due to platform match: {expanded_platform}")
+                    return True
 
+        logging.debug(f"Technique {mitre_object.get('name')} excluded: No platform match")
         return False
 
     # Filter the MITRE ATT&CK objects based on the platform
@@ -98,7 +105,12 @@ def main():
     parser.add_argument("json_file_path", help="Path to the MITRE ATT&CK JSON file")
     parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
     parser.add_argument("--output_dir", default="output", help="Directory to save processed MITRE ATT&CK data (default: output)")
+    parser.add_argument("--log_level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                        help="Set the logging level (default: INFO)")
     args = parser.parse_args()
+
+    # Set the logging level
+    logging.getLogger().setLevel(args.log_level)
 
     output_dir = args.output_dir
 
