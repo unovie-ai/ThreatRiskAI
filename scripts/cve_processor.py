@@ -6,7 +6,11 @@ import re
 from urllib.parse import urlparse
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+PLATFORM_MAPPING = {
+    "containers": ["container", "containers", "docker", "podman", "kubernetes"]
+}
 
 
 def process_cve(json_file_path, platform):
@@ -45,17 +49,28 @@ def process_cve(json_file_path, platform):
     # Extract CVE ID for logging
     cve_id = cve_data.get("cveMetadata", {}).get("cveId", "Unknown CVE")
 
+    def get_expanded_platforms(target_platform):
+        """
+        Returns a list of expanded platform terms based on the PLATFORM_MAPPING.
+        If the target_platform is not in the mapping, it returns a list containing only the target_platform.
+        """
+        return PLATFORM_MAPPING.get(target_platform, [target_platform])
+
     # Primary Check: platforms in affected products
     def primary_check(cve_record, target_platform):
         affected_products = cve_record.get("containers", {}).get("cna", {}).get("affected", [])
         if not affected_products:
             return False
 
+        expanded_platforms = get_expanded_platforms(target_platform)
+
         for product in affected_products:
             platforms = product.get("platforms", [])
-            if platforms and target_platform in platforms:
-                logging.debug(f"CVE {cve_id} retained due to platform match in affected products: {target_platform}")
-                return True
+            if platforms:
+                for expanded_platform in expanded_platforms:
+                    if expanded_platform in platforms:
+                        logging.debug(f"CVE {cve_id} retained due to platform match in affected products: {expanded_platform}")
+                        return True
         return False
 
     # Secondary Check: product and vendor names
@@ -64,13 +79,16 @@ def process_cve(json_file_path, platform):
         if not affected_products:
             return False
 
+        expanded_platforms = get_expanded_platforms(target_platform)
+
         for product in affected_products:
             product_name = product.get("product", "").lower()
             vendor_name = product.get("vendor", "").lower()
 
-            if target_platform.lower() in product_name or target_platform.lower() in vendor_name:
-                logging.debug(f"CVE {cve_id} retained due to product/vendor name match: {target_platform}")
-                return True
+            for expanded_platform in expanded_platforms:
+                if expanded_platform in product_name or expanded_platform in vendor_name:
+                    logging.debug(f"CVE {cve_id} retained due to product/vendor name match: {expanded_platform}")
+                    return True
         return False
 
     # Tertiary Check: descriptions
@@ -79,11 +97,14 @@ def process_cve(json_file_path, platform):
         if not descriptions:
             return False
 
+        expanded_platforms = get_expanded_platforms(target_platform)
+
         for description in descriptions:
             description_text = description.get("value", "").lower()
-            if target_platform.lower() in description_text:
-                logging.debug(f"CVE {cve_id} retained due to description match: {target_platform}")
-                return True
+            for expanded_platform in expanded_platforms:
+                if expanded_platform in description_text:
+                    logging.debug(f"CVE {cve_id} retained due to description match: {expanded_platform}")
+                    return True
         return False
 
     # Perform the checks with detailed logging
