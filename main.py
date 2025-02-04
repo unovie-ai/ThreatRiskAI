@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 import json
+import logging
 
 # Constants for directory paths
 OUTPUT_DIR = "output"
@@ -69,6 +70,36 @@ def process_data(json_file_path, data_type, platform):
         logging.error(f"An unexpected error occurred: {str(e)}")
         return None
 
+def generate_knowledge_graph(json_file_path, data_type):
+    """
+    Generates a knowledge graph from the processed JSON file.
+
+    Args:
+        json_file_path (str): Path to the processed JSON file.
+        data_type (str): Type of data (MITRE or CVE).
+    """
+    try:
+        command = [
+            "python",
+            "scripts/knowledge_graph_generator.py",
+            json_file_path,
+            data_type.lower()
+        ]
+
+        logging.info(f"Executing: {' '.join(command)}")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            logging.error(f"Error generating knowledge graph: {stderr.decode()}")
+        else:
+            logging.info(stdout.decode())
+
+    except FileNotFoundError:
+        logging.error("Script not found: scripts/knowledge_graph_generator.py")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
+
 
 def main():
     """
@@ -79,6 +110,7 @@ def main():
     parser.add_argument("data_type", help="Type of data (MITRE or CVE)")
     parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
+    parser.add_argument("--skip-kg", action="store_true", help="Skip knowledge graph generation")
     args = parser.parse_args()
 
     # Set logging level based on verbosity
@@ -90,6 +122,8 @@ def main():
 
     if processed_file_path:
         logging.info(f"Processed data saved to: {processed_file_path}")
+        if not args.skip_kg:
+            generate_knowledge_graph(processed_file_path, args.data_type)
     else:
         logging.error("Data processing failed.")
 
