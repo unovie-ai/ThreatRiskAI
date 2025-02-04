@@ -105,12 +105,7 @@ def main():
     parser.add_argument("json_file_path", help="Path to the MITRE ATT&CK JSON file")
     parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
     parser.add_argument("--output_dir", default="output", help="Directory to save processed MITRE ATT&CK data (default: output)")
-    parser.add_argument("--log_level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-                        help="Set the logging level (default: INFO)")
     args = parser.parse_args()
-
-    # Set the logging level
-    logging.getLogger().setLevel(args.log_level)
 
     output_dir = args.output_dir
 
@@ -136,7 +131,7 @@ def main():
             print("No relevant techniques found.")
 
     except Exception as e:
-        logging.error(f"Failed to process MITRE ATT&CK file: {str(e)}", exc_info=True)
+        logging.error(f"Failed to process MITRE ATT&CK file: {str(e)}")
         print(f"Error processing MITRE ATT&CK file: {str(e)}")
 
 

@@ -82,8 +82,8 @@ def main():
     args = parser.parse_args()
 
     # Set logging level based on verbosity
-    log_level = logging.DEBUG if args.verbose else DEFAULT_LOG_LEVEL
-    logging.getLogger().setLevel(log_level)
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     # Process the data
     processed_file_path = process_data(args.json_file_path, args.data_type, args.platform)
