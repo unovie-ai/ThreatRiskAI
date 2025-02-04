@@ -4,11 +4,11 @@ import os
 import subprocess
 import json
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 # Constants for directory paths
 OUTPUT_DIR = "output"
+
+# Default logging level
+DEFAULT_LOG_LEVEL = logging.INFO
 
 def process_data(json_file_path, data_type, platform):
     """
@@ -78,7 +78,12 @@ def main():
     parser.add_argument("json_file_path", help="Path to the input JSON file")
     parser.add_argument("data_type", help="Type of data (MITRE or CVE)")
     parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
     args = parser.parse_args()
+
+    # Set logging level based on verbosity
+    log_level = logging.DEBUG if args.verbose else DEFAULT_LOG_LEVEL
+    logging.getLogger().setLevel(log_level)
 
     # Process the data
     processed_file_path = process_data(args.json_file_path, args.data_type, args.platform)
