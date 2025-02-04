@@ -2,6 +2,7 @@
 import os
 import json
 import sqlite3
+from scripts.cve_processor import process_cve
 
 # Constants for directory paths
 DATA_DIR = "data"
@@ -56,16 +57,18 @@ def create_database_connection(db_path):
 def main():
     """Main function to orchestrate the data processing and visualization."""
 
-    # 1. Load data from JSON files
-    cve_data = load_json_data(os.path.join(DATA_DIR, "cve.json"))  # Example
-    mitre_data = load_json_data(os.path.join(DATA_DIR, "mitre.json"))  # Example
+    # 1. Process CVE data
+    cve_file_path = os.path.join(DATA_DIR, "cve.json")  # Example
+    platform = "containers"  # Example
 
-    if not cve_data or not mitre_
-        print("Error: Could not load data. Exiting.")
+    processed_cve_data = process_cve(cve_file_path, platform)
+
+    if not processed_cve_
+        print("No relevant CVE data found. Exiting.")
         return
 
     # 2. Create knowledge graph
-    knowledge_graph_file = create_knowledge_graph(cve_data)
+    knowledge_graph_file = create_knowledge_graph(processed_cve_data)
 
     # 3. Visualize knowledge graph
     visualization_file = visualize_knowledge_graph(knowledge_graph_file)
