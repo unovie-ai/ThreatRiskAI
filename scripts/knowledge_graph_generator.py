@@ -58,7 +58,7 @@ def create_knowledge_graph(json_file_path):
 
 def save_knowledge_graph(graph, base_filename):
     """
-    Saves the knowledge graph in GML and CSV formats.
+    Saves the knowledge graph in GML format and a combined CSV format.
 
     Args:
         graph (networkx.Graph): The knowledge graph.
@@ -69,32 +69,25 @@ def save_knowledge_graph(graph, base_filename):
     nx.write_gml(graph, gml_path)
     logging.info(f"Knowledge graph saved as GML: {gml_path}")
 
-    # Save as CSV (nodes and edges)
-    nodes_path = f"{base_filename}_nodes.csv"
-    edges_path = f"{base_filename}_edges.csv"
-
-    # Save nodes with attributes
-    if graph.number_of_nodes() > 0:
-        with open(nodes_path, "w") as f:
-            first_node = next(iter(graph.nodes(data=True)))[1]
-            if first_node:
-                header = "id," + ",".join(first_node.keys()) + "\n"
-            else:
-                header = "id\n"
-            f.write(header)  # Header
-            for node_id, attributes in graph.nodes(data=True):
-                values = [str(node_id)] + [str(value) for value in attributes.values()]
-                f.write(",".join(values) + "\n")
-        logging.info(f"Knowledge graph nodes saved as CSV: {nodes_path}")
-    else:
-        logging.warning("Graph has no nodes, skipping CSV node creation")
-
-    # Save edges
-    with open(edges_path, "w") as f:
-        f.write("source,target\n")  # Header
-        for source, target in graph.edges():
-            f.write(f"{source},{target}\n")
-    logging.info(f"Knowledge graph edges saved as CSV: {edges_path}")
+    # Save as combined CSV
+    combined_path = f"{base_filename}.csv"
+    
+    with open(combined_path, "w") as f:
+        # Write header
+        f.write("Node_ID,Node_Type,Attributes,Source_Node_ID,Target_Node_ID,Edge_Type\n")
+        
+        # Write nodes
+        for node_id, attributes in graph.nodes(data=True):
+            node_type = attributes.get('type', 'unknown')
+            attr_str = str({k: v for k, v in attributes.items() if k != 'type'})
+            f.write(f'"{node_id}","{node_type}","{attr_str}",,,,\n')
+        
+        # Write edges
+        for source, target, data in graph.edges(data=True):
+            edge_type = data.get('relation', 'unknown')
+            f.write(f',,,{source},{target},{edge_type}\n')
+    
+    logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
 
 
 def visualize_knowledge_graph(graph, base_filename):
