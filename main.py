@@ -1,87 +1,92 @@
-
+import argparse
+import logging
 import os
+import subprocess
 import json
-import sqlite3
-from scripts.cve_processor import process_cve
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants for directory paths
-DATA_DIR = "data"
-KNOWLEDGE_GRAPHS_DIR = "knowledge_graphs"
-VISUALIZATION_DIR = os.path.join(KNOWLEDGE_GRAPHS_DIR, "visualization")
-DB_DIR = "db"
-SCRIPTS_DIR = "scripts"
+OUTPUT_DIR = "output"
 
-# Database file path (using .env variable)
-DATABASE_PATH = os.getenv("DATABASE_PATH", os.path.join(DB_DIR, "threats.db"))
+def process_data(json_file_path, data_type, platform):
+    """
+    Processes data based on the specified data type (MITRE or CVE).
 
+    Args:
+        json_file_path (str): Path to the input JSON file.
+        data_type (str): Specifies whether the input file is "MITRE" or "CVE".
+        platform (str): The target platform for filtering (e.g., "containers", "Windows", "Linux").
 
-def load_json_data(file_path):
-    """Loads JSON data from a file."""
+    Returns:
+        str: The path to the processed JSON file, or None if an error occurred.
+    """
+
+    # Create the output directory if it doesn't exist
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+
+    # Extract filename from path
+    file_name = os.path.basename(json_file_path)
+    output_file_path = os.path.join(OUTPUT_DIR, file_name)
+
     try:
-        with open(file_path, "r") as f:
-            data = json.load(f)
-        return data
+        if data_type.upper() == "MITRE":
+            script_path = "scripts/mitre_processor.py"
+        elif data_type.upper() == "CVE":
+            script_path = "scripts/cve_processor.py"
+        else:
+            raise ValueError("Invalid data_type. Must be 'MITRE' or 'CVE'.")
+
+        # Construct the command to execute the script
+        command = [
+            "python",
+            script_path,
+            json_file_path,
+            platform,
+            "--output_dir", OUTPUT_DIR
+        ]
+
+        logging.info(f"Executing: {' '.join(command)}")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            logging.error(f"Error processing {data_type}  {stderr.decode()}")
+            return None
+
+        logging.info(stdout.decode())
+        return output_file_path
+
+    except ValueError as e:
+        logging.error(str(e))
+        return None
     except FileNotFoundError:
-        print(f"Error: File not found at {file_path}")
+        logging.error(f"Script not found: {script_path}")
         return None
-    except json.JSONDecodeError:
-        print(f"Error: Invalid JSON format in {file_path}")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
         return None
-
-
-def create_knowledge_graph(data):
-    """Extracts and transforms data into a knowledge graph format (CSV)."""
-    # Placeholder for knowledge graph creation logic
-    print("Creating knowledge graph...")
-    return "knowledge_graph.csv"  # Return the filename
-
-
-def visualize_knowledge_graph(graph_file):
-    """Generates an interactive visualization of the knowledge graph (HTML)."""
-    # Placeholder for visualization logic
-    print("Generating visualization...")
-    return "visualization.html"  # Return the filename
-
-
-def create_database_connection(db_path):
-    """Creates a database connection."""
-    conn = None
-    try:
-        conn = sqlite3.connect(db_path)
-        print(f"Connected to database: {db_path}")
-    except sqlite3.Error as e:
-        print(f"Error connecting to database: {e}")
-    return conn
 
 
 def main():
-    """Main function to orchestrate the data processing and visualization."""
+    """
+    Main function to orchestrate the data processing pipeline.
+    """
+    parser = argparse.ArgumentParser(description="Process threat data (MITRE or CVE) based on the specified platform.")
+    parser.add_argument("json_file_path", help="Path to the input JSON file")
+    parser.add_argument("data_type", help="Type of data (MITRE or CVE)")
+    parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
+    args = parser.parse_args()
 
-    # 1. Process CVE data
-    cve_file_path = os.path.join(DATA_DIR, "cve.json")  # Example
-    platform = "containers"  # Example
+    # Process the data
+    processed_file_path = process_data(args.json_file_path, args.data_type, args.platform)
 
-    processed_cve_data = process_cve(cve_file_path, platform)
-
-    if not processed_cve_
-        print("No relevant CVE data found. Exiting.")
-        return
-
-    # 2. Create knowledge graph
-    knowledge_graph_file = create_knowledge_graph(processed_cve_data)
-
-    # 3. Visualize knowledge graph
-    visualization_file = visualize_knowledge_graph(knowledge_graph_file)
-
-    # 4. Connect to the database
-    conn = create_database_connection(DATABASE_PATH)
-    if conn:
-        # Perform database operations here (e.g., store data)
-        conn.close()
-
-    print(f"Knowledge graph saved to: {os.path.join(KNOWLEDGE_GRAPHS_DIR, knowledge_graph_file)}")
-    print(f"Visualization saved to: {os.path.join(VISUALIZATION_DIR, visualization_file)}")
-    print("Threat Risk Assessment process completed.")
+    if processed_file_path:
+        logging.info(f"Processed data saved to: {processed_file_path}")
+    else:
+        logging.error("Data processing failed.")
 
 
 if __name__ == "__main__":
