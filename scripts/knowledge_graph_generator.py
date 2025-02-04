@@ -108,11 +108,28 @@ def create_mitre_knowledge_graph(json_file_path):
     # Extract techniques and add them as nodes
     techniques = data.get("techniques", [])
     for technique in techniques:
-        technique_name = technique.get("name", "Unknown Technique")
-        G.add_node(technique_name, type="technique", **technique)
-        G.add_edge(mitre_id, technique_name, relation="contains")
+        add_technique_and_subtechniques(G, mitre_id, technique)
 
     return G
+
+
+def add_technique_and_subtechniques(graph, parent_id, technique):
+    """
+    Recursively adds a technique and its sub-techniques to the knowledge graph.
+
+    Args:
+        graph (networkx.Graph): The knowledge graph.
+        parent_id (str): The ID of the parent node (MITRE ID or parent technique).
+        technique (dict): The technique data.
+    """
+    technique_name = technique.get("name", "Unknown Technique")
+    graph.add_node(technique_name, type="technique", **technique)
+    graph.add_edge(parent_id, technique_name, relation="contains")
+
+    # Extract sub-techniques and recursively add them
+    sub_techniques = technique.get("techniques", [])
+    for sub_technique in sub_techniques:
+        add_technique_and_subtechniques(graph, technique_name, sub_technique)
 
 
 def save_knowledge_graph(graph, base_filename):
