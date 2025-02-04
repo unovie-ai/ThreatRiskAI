@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import os
@@ -80,10 +81,16 @@ def process_cve(json_file_path, platform):
         return False
 
     # Perform the checks
-    if primary_check(cve_data, platform) or secondary_check(cve_data, platform) or tertiary_check(cve_data, platform):
+    if primary_check(cve_data, platform):
+        logging.debug(f"CVE {cve_id} passed primary check for platform: {platform}")
+        return cve_data
+    elif secondary_check(cve_data, platform):
+        logging.debug(f"CVE {cve_id} passed secondary check for platform: {platform}")
+        return cve_data
+    elif tertiary_check(cve_data, platform):
+        logging.debug(f"CVE {cve_id} passed tertiary check for platform: {platform}")
         return cve_data
     else:
-        logging.debug(f"CVE {cve_id} ignored: No platform match found for {platform}")
         logging.debug(f"CVE {cve_id} ignored: No platform match found for {platform}")
         return None
 
