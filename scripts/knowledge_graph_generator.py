@@ -102,7 +102,8 @@ def create_mitre_knowledge_graph(json_file_path):
 
     # Extract MITRE ID as the central node
     mitre_id = data.get("id", "Unknown MITRE ID")
-    G.add_node(mitre_id, type="mitre", **data)
+    data['type'] = "mitre"
+    G.add_node(mitre_id, **data)
 
     # Extract techniques and add them as nodes
     techniques = data.get("techniques", [])
