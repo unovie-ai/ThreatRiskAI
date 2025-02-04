@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+from urllib.parse import urlparse
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -83,6 +84,7 @@ def process_cve(json_file_path, platform):
         return cve_data
     else:
         logging.debug(f"CVE {cve_id} ignored: No platform match found for {platform}")
+        logging.debug(f"CVE {cve_id} ignored: No platform match found for {platform}")
         return None
 
 
@@ -93,6 +95,15 @@ def main():
     # Example usage:
     json_file_path = "data/cve.json"  # Replace with your actual file path
     platform = "containers"
+    output_dir = "temp"
+
+    # Create the output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Extract filename from path
+    file_name = os.path.basename(json_file_path)
+    output_file_path = os.path.join(output_dir, file_name)
 
     # Create a dummy cve.json file for testing
     if not os.path.exists("data"):
@@ -137,7 +148,10 @@ def main():
     processed_data = process_cve(json_file_path, platform)
 
     if processed_
-        print(json.dumps(processed_data, indent=4))
+        # Save the processed data to the output file
+        with open(output_file_path, "w") as outfile:
+            json.dump(processed_data, outfile, indent=4)
+        print(f"Processed data saved to: {output_file_path}")
     else:
         print("No relevant CVEs found.")
 
