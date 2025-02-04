@@ -147,7 +147,7 @@ def main():
 
     processed_data = process_cve(json_file_path, platform)
 
-    if processed_
+    if processed_data is not None:
         # Save the processed data to the output file
         with open(output_file_path, "w") as outfile:
             json.dump(processed_data, outfile, indent=4)
