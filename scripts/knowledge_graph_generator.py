@@ -126,7 +126,8 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
     """
     technique_id = technique.get("id")
     technique_name = technique.get("name", "Unknown Technique")
-    graph.add_node(technique_name, type="technique", **technique)
+    technique['type'] = "technique"
+    graph.add_node(technique_name, **technique)
     graph.add_edge(parent_id, technique_name, relation="contains")
 
     # Find sub-techniques
