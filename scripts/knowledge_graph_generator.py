@@ -8,14 +8,36 @@ import matplotlib.pyplot as plt
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Constants
+SUPPORTED_DATA_TYPES = ["cve", "mitre"]
 # Constants for directory paths
 KNOWLEDGE_GRAPHS_DIR = "knowledge_graphs"
 VISUALIZATION_DIR = os.path.join(KNOWLEDGE_GRAPHS_DIR, "visualization")
 
 
-def create_knowledge_graph(json_file_path):
+def create_knowledge_graph(json_file_path, data_type):
     """
     Creates a knowledge graph from a JSON file.
+
+    Args:
+        json_file_path (str): The path to the JSON file.
+        data_type (str): Type of data (cve or mitre).
+
+    Returns:
+        networkx.Graph: The knowledge graph.
+    """
+    if data_type == "cve":
+        return create_cve_knowledge_graph(json_file_path)
+    elif data_type == "mitre":
+        return create_mitre_knowledge_graph(json_file_path)
+    else:
+        logging.error(f"Unsupported data type: {data_type}")
+        return None
+
+
+def create_cve_knowledge_graph(json_file_path):
+    """
+    Creates a knowledge graph from a CVE JSON file.
 
     Args:
         json_file_path (str): The path to the JSON file.
@@ -52,6 +74,42 @@ def create_knowledge_graph(json_file_path):
         description_text = description.get("value", "No Description")
         G.add_node(description_text, type="description", **description)
         G.add_edge(cve_id, description_text, relation="describes")
+
+    return G
+
+
+def create_mitre_knowledge_graph(json_file_path):
+    """
+    Creates a knowledge graph from a MITRE ATT&CK JSON file.
+
+    Args:
+        json_file_path (str): The path to the JSON file.
+
+    Returns:
+        networkx.Graph: The knowledge graph.
+    """
+    try:
+        with open(json_file_path, 'r') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        logging.error(f"File not found: {json_file_path}")
+        return None
+    except json.JSONDecodeError:
+        logging.error(f"Invalid JSON format in: {json_file_path}")
+        return None
+
+    G = nx.Graph()
+
+    # Extract MITRE ID as the central node
+    mitre_id = data.get("id", "Unknown MITRE ID")
+    G.add_node(mitre_id, type="mitre", **data)
+
+    # Extract techniques and add them as nodes
+    techniques = data.get("techniques", [])
+    for technique in techniques:
+        technique_name = technique.get("name", "Unknown Technique")
+        G.add_node(technique_name, type="technique", **technique)
+        G.add_edge(mitre_id, technique_name, relation="contains")
 
     return G
 
@@ -116,7 +174,13 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Generate knowledge graphs from JSON files.")
     parser.add_argument("json_file_path", help="Path to the input JSON file")
+    parser.add_argument("data_type", help="Type of data (cve or mitre)")
     args = parser.parse_args()
+
+    # Validate data_type
+    if args.data_type not in SUPPORTED_DATA_TYPES:
+        logging.error(f"Invalid data type: {args.data_type}. Supported types are: {SUPPORTED_DATA_TYPES}")
+        return
 
     # Extract filename from path
     file_name = os.path.splitext(os.path.basename(args.json_file_path))[0]
@@ -126,7 +190,7 @@ def main():
     os.makedirs(VISUALIZATION_DIR, exist_ok=True)
 
     # Create the knowledge graph
-    graph = create_knowledge_graph(args.json_file_path)
+    graph = create_knowledge_graph(args.json_file_path, args.data_type)
     if graph is None:
         logging.error("Failed to create knowledge graph.")
         return
