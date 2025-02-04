@@ -54,6 +54,9 @@ def process_mitre(json_file_path, platform):
         object_platforms = mitre_object.get("x_mitre_platforms", [])
 
         if not object_platforms:
+            if "all" in object_platforms:
+                logging.debug(f"Technique {mitre_object.get('name')} retained due to platform match: all")
+                return True
             return False
 
         for expanded_platform in expanded_platforms:
