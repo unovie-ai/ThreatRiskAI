@@ -324,6 +324,12 @@ def visualize_knowledge_graph(graph, base_filename):
     png_path = f"{base_filename}.png"
     plt.savefig(png_path)
     plt.close()  # Close the plot to free memory
+
+    # Generate Cytoscape visualization
+    cytoscape_html_path = os.path.join(CYTOSCAPE_DIR, f"{base_filename.split('/')[-1]}.html")
+    generate_cytoscape_html(graph, cytoscape_html_path)
+
+
 def generate_cytoscape_html(graph, output_path):
     """
     Generates an HTML file with a Cytoscape.js visualization of the knowledge graph.
@@ -436,10 +442,6 @@ def generate_cytoscape_html(graph, output_path):
         f.write(html_content)
 
     logging.info(f"Cytoscape.js visualization saved as HTML: {output_path}")
-
-    # Generate Cytoscape visualization
-    cytoscape_html_path = os.path.join(CYTOSCAPE_DIR, f"{base_filename.split('/')[-1]}.html")
-    generate_cytoscape_html(graph, cytoscape_html_path)
 
 
 def main():
