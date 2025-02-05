@@ -72,13 +72,20 @@ def process_data(json_file_path, data_type, platform):
 
 def generate_knowledge_graph(json_file_path, data_type):
     """
-    Generates a knowledge graph from the processed JSON file.
+    Generates a knowledge graph from the processed JSON file and returns the path to the generated CSV file.
 
     Args:
         json_file_path (str): Path to the processed JSON file.
         data_type (str): Type of data (MITRE or CVE).
+
+    Returns:
+        str: The path to the generated CSV file, or None if an error occurred.
     """
     try:
+        # Extract filename from path
+        file_name = os.path.splitext(os.path.basename(json_file_path))[0]
+        csv_file_path = os.path.join("knowledge_graphs", f"{file_name}.csv")
+
         command = [
             "python",
             "scripts/knowledge_graph_generator.py",
@@ -92,13 +99,17 @@ def generate_knowledge_graph(json_file_path, data_type):
 
         if process.returncode != 0:
             logging.error(f"Error generating knowledge graph: {stderr.decode()}")
+            return None
         else:
             logging.info(stdout.decode())
+            return csv_file_path
 
     except FileNotFoundError:
         logging.error("Script not found: scripts/knowledge_graph_generator.py")
+        return None
     except Exception as e:
         logging.error(f"An unexpected error occurred: {str(e)}")
+        return None
 
 
 def main():
@@ -123,7 +134,26 @@ def main():
     if processed_file_path:
         logging.info(f"Processed data saved to: {processed_file_path}")
         if not args.skip_kg:
-            generate_knowledge_graph(processed_file_path, args.data_type)
+            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type)
+            if csv_file_path:
+                # Call db_updater.py to embed the knowledge graph into the database
+                command = [
+                    "python",
+                    "scripts/db_updater.py",
+                    csv_file_path,
+                    args.data_type,
+                    args.platform
+                ]
+                logging.info(f"Executing: {' '.join(command)}")
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+
+                if process.returncode != 0:
+                    logging.error(f"Error updating database: {stderr.decode()}")
+                else:
+                    logging.info(stdout.decode())
+            else:
+                logging.error("Knowledge graph generation failed.")
     else:
         logging.error("Data processing failed.")
 
