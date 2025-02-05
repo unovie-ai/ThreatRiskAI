@@ -4,6 +4,7 @@ import logging
 import os
 import networkx as nx
 import matplotlib.pyplot as plt
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -13,6 +14,7 @@ SUPPORTED_DATA_TYPES = ["cve", "mitre"]
 # Constants for directory paths
 KNOWLEDGE_GRAPHS_DIR = "knowledge_graphs"
 VISUALIZATION_DIR = os.path.join(KNOWLEDGE_GRAPHS_DIR, "visualization")
+CYTOSCAPE_DIR = os.path.join(VISUALIZATION_DIR, "cytoscape")
 
 
 def create_knowledge_graph(json_file_path, data_type):
@@ -322,7 +324,122 @@ def visualize_knowledge_graph(graph, base_filename):
     png_path = f"{base_filename}.png"
     plt.savefig(png_path)
     plt.close()  # Close the plot to free memory
-    logging.info(f"Knowledge graph visualization saved as PNG: {png_path}")
+def generate_cytoscape_html(graph, output_path):
+    """
+    Generates an HTML file with a Cytoscape.js visualization of the knowledge graph.
+
+    Args:
+        graph (networkx.Graph): The knowledge graph.
+        output_path (str): The output path for the HTML file.
+    """
+    os.makedirs(CYTOSCAPE_DIR, exist_ok=True)
+
+    # Prepare nodes and edges for Cytoscape.js
+    nodes = [{"data": {"id": node_id, "label": data.get("Label", node_id), "type": data.get("Type", "Unknown")}} for node_id, data in graph.nodes(data=True)]
+    edges = [{"data": {"source": source, "target": target, "label": data.get("Relationship", "Connects")}} for source, target, data in graph.edges(data=True)]
+
+    # Cytoscape.js stylesheet
+    stylesheet = [
+        {
+            "selector": "node",
+            "style": {
+                "label": "data(label)",
+                "font-size": "12px",
+                "text-valign": "center",
+                "text-halign": "center",
+                "background-color": "white",
+                "border-color": "black",
+                "border-width": "1px",
+                "padding": "5px"
+            }
+        },
+        {
+            "selector": "edge",
+            "style": {
+                "width": 2,
+                "line-color": "#ccc",
+                "target-arrow-color": "#ccc",
+                "target-arrow-shape": "triangle",
+                "curve-style": "bezier",
+                "label": "data(label)",
+                "font-size": "10px"
+            }
+        },
+        {
+            "selector": "node[type='CVE']",
+            "style": {
+                "background-color": "#ff6961",
+                "color": "white"
+            }
+        },
+        {
+            "selector": "node[type='Product']",
+            "style": {
+                "background-color": "#77dd77",
+                "color": "black"
+            }
+        },
+        {
+            "selector": "node[type='MITRE']",
+            "style": {
+                "background-color": "#84b6f4",
+                "color": "black"
+            }
+        }
+    ]
+
+    # HTML content with Cytoscape.js
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Knowledge Graph Visualization</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.0/cytoscape.min.js"></script>
+        <style>
+            body {{ font-family: Arial, sans-serif; }}
+            #cy {{
+                width: 100%;
+                height: 800px;
+                display: block;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Knowledge Graph Visualization</h1>
+        <div id="cy"></div>
+        <script>
+            var cy = cytoscape({{
+                container: document.getElementById('cy'),
+                elements: {{
+                    nodes: {nodes},
+                    edges: {edges}
+                }},
+                style: {stylesheet},
+                layout: {{
+                    name: 'cose',  // Use cose layout
+                    nodeRepulsion: 400000,
+                    idealEdgeLength: 100,
+                    edgeElasticity: 100,
+                    gravity: 50,
+                    randomize: true,
+                    animate: false,
+                    
+                }}
+            }});
+        </script>
+    </body>
+    </html>
+    """
+
+    # Write HTML content to file
+    with open(output_path, "w") as f:
+        f.write(html_content)
+
+    logging.info(f"Cytoscape.js visualization saved as HTML: {output_path}")
+
+    # Generate Cytoscape visualization
+    cytoscape_html_path = os.path.join(CYTOSCAPE_DIR, f"{base_filename.split('/')[-1]}.html")
+    generate_cytoscape_html(graph, cytoscape_html_path)
 
 
 def main():
