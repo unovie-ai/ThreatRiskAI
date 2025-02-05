@@ -239,10 +239,10 @@ def visualize_knowledge_graph(graph, base_filename):
         base_filename (str): The base filename for saving the visualization.
     """
     plt.figure(figsize=(16, 12), dpi=300)
-    
-    # Create layered layout for directed graphs
-    pos = nx.drawing.layout.planar_layout(graph)
-    
+
+    # Use spring layout for directed graphs
+    pos = nx.spring_layout(graph, seed=42)  # Seed for reproducibility
+
     # Node styling based on type
     node_colors = []
     for node in graph.nodes(data=True):
