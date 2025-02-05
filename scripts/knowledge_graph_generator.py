@@ -55,18 +55,46 @@ def create_cve_knowledge_graph(json_file_path):
         logging.error(f"Invalid JSON format in: {json_file_path}")
         return None
 
-    G = nx.Graph()
-
-    # Extract CVE ID as the central node
-    cve_id = data.get("cveMetadata", {}).get("cveId", "Unknown CVE")
-    G.add_node(cve_id, type="cve", **data.get("cveMetadata", {}))
+    G = nx.DiGraph()
+    
+    # Extract and validate CVE ID
+    cve_metadata = data.get("cveMetadata", {})
+    cve_id = cve_metadata.get("cveId")
+    if not cve_id:
+        logging.error("Missing CVE ID in metadata")
+        return None
+        
+    # Add central CVE node with structured attributes
+    G.add_node(cve_id, 
+               Type="CVE",
+               Label=f"CVE-{cve_id}",
+               Severity=cve_metadata.get("severity", "Unknown"),
+               Published=cve_metadata.get("datePublished", ""),
+               Modified=cve_metadata.get("dateUpdated", ""),
+               Source="NVD")
 
     # Extract affected products and add them as nodes
     affected_products = data.get("containers", {}).get("cna", {}).get("affected", [])
     for product in affected_products:
-        product_name = product.get("product", "Unknown Product")
-        G.add_node(product_name, type="product", **product)
-        G.add_edge(cve_id, product_name, relation="affects")
+        product_name = product.get("product")
+        if not product_name:
+            continue
+            
+        # Add product node with version info
+        vendor = product.get("vendor", "Unknown Vendor")
+        version = product.get("version", "Unknown Version")
+        G.add_node(product_name,
+                   Type="Product",
+                   Label=f"{vendor} {product_name}",
+                   Vendor=vendor,
+                   Version=version,
+                   Platform=product.get("platform", ""))
+        
+        # Add versioned edge with CVE relationship
+        G.add_edge(cve_id, product_name, 
+                   Relationship="AFFECTS",
+                   VersionRange=version,
+                   AttackVector=product.get("attackVector", ""))
 
     # Extract descriptions and add them as nodes
     descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
@@ -98,12 +126,22 @@ def create_mitre_knowledge_graph(json_file_path):
         logging.error(f"Invalid JSON format in: {json_file_path}")
         return None
 
-    G = nx.Graph()
+    G = nx.DiGraph()
 
-    # Extract MITRE ID as the central node
-    mitre_id = data.get("id", "Unknown MITRE ID")
-    data['type'] = "mitre"
-    G.add_node(mitre_id, **data)
+    # Validate MITRE ID format
+    mitre_id = data.get("id")
+    if not mitre_id or not mitre_id.startswith("attack-pattern--"):
+        logging.error(f"Invalid MITRE ID format: {mitre_id}")
+        return None
+        
+    # Add MITRE node with structured attributes
+    G.add_node(mitre_id,
+               Type="MITRE",
+               Label=data.get("name", "Unknown Technique"),
+               Tactic=data.get("x_mitre_tactic", []),
+               Platform=data.get("x_mitre_platforms", []),
+               Version=data.get("x_mitre_version", ""),
+               Source="MITRE ATT&CK")
 
     # Extract techniques and add them as nodes
     objects = data.get("objects", [])
@@ -126,9 +164,22 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
     """
     technique_id = technique.get("id")
     technique_name = technique.get("name", "Unknown Technique")
-    technique['type'] = "technique"
-    graph.add_node(technique_name, **technique)
-    graph.add_edge(parent_id, technique_name, relation="contains")
+    # Add technique with validation
+    if not technique_id or not technique_id.startswith("attack-pattern--"):
+        logging.warning(f"Skipping invalid technique ID: {technique_id}")
+        return
+        
+    graph.add_node(technique_name,
+                   Type="Technique",
+                   Label=technique.get("name", "Unknown Technique"),
+                   ID=technique_id,
+                   Description=technique.get("description", ""),
+                   KillChain=technique.get("kill_chain_phases", []))
+                   
+    graph.add_edge(parent_id, technique_name,
+                   Relationship="CONTAINS",
+                   Subtype="Subtechnique" if "subtechnique" in technique_id else "Primary",
+                   Mitigation=technique.get("x_mitre_mitigation", ""))
 
     # Find sub-techniques
     sub_techniques_relationships = [obj for obj in objects if obj.get("type") == "relationship" and obj.get("source_ref") == technique_id and obj.get("relationship_type") == "subtechnique-of"]
@@ -181,10 +232,38 @@ def visualize_knowledge_graph(graph, base_filename):
         graph (networkx.Graph): The knowledge graph.
         base_filename (str): The base filename for saving the visualization.
     """
-    plt.figure(figsize=(12, 12))
-    pos = nx.spring_layout(graph, seed=42)  # Layout algorithm
+    plt.figure(figsize=(16, 12), dpi=300)
+    
+    # Create layered layout for directed graphs
+    pos = nx.drawing.layout.planar_layout(graph)
+    
+    # Node styling based on type
+    node_colors = []
+    for node in graph.nodes(data=True):
+        if node[1].get('Type') == 'CVE':
+            node_colors.append('#ff6961')  # Red
+        elif node[1].get('Type') == 'Product':
+            node_colors.append('#77dd77')  # Green
+        else:  # MITRE/Technique
+            node_colors.append('#84b6f4')  # Blue
 
-    nx.draw(graph, pos, with_labels=True, node_color="skyblue", node_size=1500, font_size=10, font_weight="bold")
+    # Edge styling based on relationship
+    edge_colors = []
+    for edge in graph.edges(data=True):
+        if edge[2].get('Relationship') == 'AFFECTS':
+            edge_colors.append('#ff0000')  # Red
+        else:  # CONTAINS or other
+            edge_colors.append('#0000ff')  # Blue
+
+    nx.draw(graph, pos, with_labels=True, 
+            node_color=node_colors, 
+            edge_color=edge_colors,
+            node_size=[len(str(n))*200 for n in graph.nodes()], 
+            font_size=8, 
+            font_weight="bold",
+            arrows=True,
+            arrowsize=20,
+            connectionstyle='arc3,rad=0.1')
     plt.title("Knowledge Graph Visualization")
 
     png_path = f"{base_filename}.png"
