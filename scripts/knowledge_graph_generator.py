@@ -56,22 +56,37 @@ def create_cve_knowledge_graph(json_file_path):
         return None
 
     G = nx.DiGraph()
-    
+
+    # Extract CVE node and relationships
+    extract_cve_nodes(G, data)
+    extract_cve_relationships(G, data)
+
+    return G
+
+
+def extract_cve_nodes(graph, data):
+    """
+    Extracts CVE, Product, and Vendor nodes from the CVE data and adds them to the graph.
+
+    Args:
+        graph (networkx.Graph): The knowledge graph.
+        data (dict): The CVE data in JSON format.
+    """
     # Extract and validate CVE ID
     cve_metadata = data.get("cveMetadata", {})
     cve_id = cve_metadata.get("cveId")
     if not cve_id:
         logging.error("Missing CVE ID in metadata")
-        return None
-        
+        return
+
     # Add central CVE node with structured attributes
-    G.add_node(cve_id, 
-               Type="CVE",
-               Label=f"CVE-{cve_id}",
-               Severity=cve_metadata.get("severity", "Unknown"),
-               Published=cve_metadata.get("datePublished", ""),
-               Modified=cve_metadata.get("dateUpdated", ""),
-               Source="NVD")
+    graph.add_node(cve_id,
+                   Type="CVE",
+                   Label=f"CVE-{cve_id}",
+                   Severity=cve_metadata.get("severity", "Unknown"),
+                   Published=cve_metadata.get("datePublished", ""),
+                   Modified=cve_metadata.get("dateUpdated", ""),
+                   Source="NVD")
 
     # Extract affected products and add them as nodes
     affected_products = data.get("containers", {}).get("cna", {}).get("affected", [])
@@ -79,31 +94,63 @@ def create_cve_knowledge_graph(json_file_path):
         product_name = product.get("product")
         if not product_name:
             continue
-            
+
+        # Add product node with version info
+        vendor = product.get("vendor", "Unknown Vendor")
+
+        # Add vendor node
+        graph.add_node(vendor, Type="Vendor", Label=vendor)
+
+        version = product.get("version", "Unknown Version")
+        graph.add_node(product_name,
+                       Type="Product",
+                       Label=f"{vendor} {product_name}",
+                       Vendor=vendor,
+                       Version=version,
+                       Platform=product.get("platform", ""))
+
+
+def extract_cve_relationships(graph, data):
+    """
+    Extracts relationships between CVEs, Products, and Vendors from the CVE data and adds them to the graph.
+
+    Args:
+        graph (networkx.Graph): The knowledge graph.
+        data (dict): The CVE data in JSON format.
+    """
+    # Extract and validate CVE ID
+    cve_metadata = data.get("cveMetadata", {})
+    cve_id = cve_metadata.get("cveId")
+    if not cve_id:
+        logging.error("Missing CVE ID in metadata")
+        return
+
+    # Extract affected products and add them as nodes
+    affected_products = data.get("containers", {}).get("cna", {}).get("affected", [])
+    for product in affected_products:
+        product_name = product.get("product")
+        if not product_name:
+            continue
+
         # Add product node with version info
         vendor = product.get("vendor", "Unknown Vendor")
         version = product.get("version", "Unknown Version")
-        G.add_node(product_name,
-                   Type="Product",
-                   Label=f"{vendor} {product_name}",
-                   Vendor=vendor,
-                   Version=version,
-                   Platform=product.get("platform", ""))
-        
+
         # Add versioned edge with CVE relationship
-        G.add_edge(cve_id, product_name, 
-                   Relationship="AFFECTS",
-                   VersionRange=version,
-                   AttackVector=product.get("attackVector", ""))
+        graph.add_edge(cve_id, product_name,
+                       Relationship="AFFECTS",
+                       VersionRange=version,
+                       AttackVector=product.get("attackVector", ""))
+
+        # Add BELONGS_TO relationship between Product and Vendor
+        graph.add_edge(product_name, vendor, Relationship="BELONGS_TO")
 
     # Extract descriptions and add them as nodes
     descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
     for description in descriptions:
         description_text = description.get("value", "No Description")
-        G.add_node(description_text, type="description", **description)
-        G.add_edge(cve_id, description_text, relation="describes")
-
-    return G
+        graph.add_node(description_text, type="description", **description)
+        graph.add_edge(cve_id, description_text, relation="describes")
 
 
 def create_mitre_knowledge_graph(json_file_path):
