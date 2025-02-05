@@ -128,26 +128,32 @@ def create_mitre_knowledge_graph(json_file_path):
 
     G = nx.DiGraph()
 
-    # Validate MITRE ID format
-    mitre_id = data.get("id")
-    if not mitre_id or not mitre_id.startswith("attack-pattern--"):
-        logging.error(f"Invalid MITRE ID format: {mitre_id}")
-        return None
-        
-    # Add MITRE node with structured attributes
-    G.add_node(mitre_id,
-               Type="MITRE",
-               Label=data.get("name", "Unknown Technique"),
-               Tactic=data.get("x_mitre_tactic", []),
-               Platform=data.get("x_mitre_platforms", []),
-               Version=data.get("x_mitre_version", ""),
-               Source="MITRE ATT&CK")
-
-    # Extract techniques and add them as nodes
+    # Extract objects and filter for attack-patterns
     objects = data.get("objects", [])
-    techniques = [obj for obj in objects if obj.get("type") == "attack-pattern"]
-    for technique in techniques:
-        add_technique_and_subtechniques(G, mitre_id, technique, objects)
+    attack_patterns = [obj for obj in objects if obj.get("type") == "attack-pattern"]
+
+    # Process each attack-pattern object
+    for attack_pattern in attack_patterns:
+        mitre_id = attack_pattern.get("id")
+
+        # Skip non-relevant objects
+        if not mitre_id or not mitre_id.startswith("attack-pattern--"):
+            logging.warning(f"Skipping object with invalid MITRE ID: {mitre_id}")
+            continue
+
+        # Add MITRE node with structured attributes
+        G.add_node(mitre_id,
+                   Type="MITRE",
+                   Label=attack_pattern.get("name", "Unknown Technique"),
+                   Tactic=attack_pattern.get("x_mitre_tactic", []),
+                   Platform=attack_pattern.get("x_mitre_platforms", []),
+                   Version=attack_pattern.get("x_mitre_version", ""),
+                   Source="MITRE ATT&CK")
+
+        # Extract techniques and add them as nodes
+        techniques = [obj for obj in objects if obj.get("type") == "attack-pattern"]
+        for technique in techniques:
+            add_technique_and_subtechniques(G, mitre_id, technique, objects)
 
     return G
 
