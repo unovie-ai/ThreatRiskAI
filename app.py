@@ -5,13 +5,13 @@ from flask import Flask, request, jsonify
 from flasgger import Swagger
 from flasgger.utils import swag_from
 from werkzeug.utils import secure_filename
-import config
+import config as config_module
 from models import UploadRequestSchema, QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
 from marshmallow import ValidationError
 
 # Initialize Flask application
 app = Flask(__name__)
-app.config.from_object(config)
+app.config.from_object(config_module)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
