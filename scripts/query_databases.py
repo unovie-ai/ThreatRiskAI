@@ -28,7 +28,7 @@ def extract_subject(query):
     try:
         command = [
             "llm", "-m", LLM_MODEL,
-            f"Extract subject from the following: {query}"
+            f"\"Extract subject from the following: {query}\""
         ]
         logging.info(f"Executing command: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -69,7 +69,7 @@ def query_database(db_path, collection, subject):
             "llm", "similar", collection,
             "-n", str(NUM_RESULTS),
             "-d", db_path,
-            "-c", subject
+            "-c", f"\"{subject}\""
         ]
         logging.info(f"Executing command: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -104,7 +104,7 @@ def generate_final_response(query, context):
     try:
         command = [
             "llm", "-m", LLM_MODEL,
-            f"{query}\nContext:\n{context}"
+            f"\"{query}\nContext:\n{context}\""
         ]
         logging.info(f"Executing command: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
