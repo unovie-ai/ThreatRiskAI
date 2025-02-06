@@ -43,29 +43,21 @@ def allowed_file(filename):
 @app.route('/upload', methods=['POST'])
 @swag_from({
     'summary': 'Upload a threat data file for processing',
-    'consumes': ['multipart/form-data'],
+    'consumes': ['application/json'],
     'parameters': [
         {
-            'name': 'data_type',
-            'in': 'formData',
-            'type': 'string',
+            'name': 'body',
+            'in': 'body',
             'required': 'true',
-            'enum': ['CVE', 'MITRE'],
-            'description': 'Type of data (CVE or MITRE)'
-        },
-        {
-            'name': 'platform',
-            'in': 'formData',
-            'type': 'string',
-            'required': 'true',
-            'description': 'Target platform (e.g., containers, Windows)'
-        },
-        {
-            'name': 'file',
-            'in': 'formData',
-            'type': 'file',
-            'required': 'true',
-            'description': 'JSON file containing threat data'
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'data_type': {'type': 'string', 'enum': ['CVE', 'MITRE'], 'description': 'Type of data (CVE or MITRE)'},
+                    'platform': {'type': 'string', 'description': 'Target platform (e.g., containers, Windows)'},
+                    'file_content': {'type': 'string', 'description': 'JSON file content as a string'}
+                },
+                'required': ['data_type', 'platform', 'file_content']
+            }
         }
     ],
     'responses': {
@@ -79,50 +71,41 @@ def upload_file():
         # Validate request using schema
         schema = UploadRequestSchema()
         try:
-            form_data = schema.load(request.form)
+            request_data = schema.load(request.json)
         except ValidationError as err:
             return jsonify({'error': err.messages}), 400
 
-        data_type = form_data['data_type']
-        platform = form_data['platform']
+        data_type = request_data['data_type']
+        platform = request_data['platform']
+        file_content = request_data['file_content']
 
-        # Check if a file was uploaded
-        if 'file' not in request.files:
-            return jsonify({'error': 'No file part in the request.'}), 400
+        # Create a temporary file to store the file content
+        filename = "temp_upload.json"  # You might want to generate a unique filename
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-        file = request.files['file']
+        with open(file_path, 'w') as f:
+            f.write(file_content)
 
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == '':
-            return jsonify({'error': 'No file selected.'}), 400
+        logging.info(f"File saved to: {file_path}")
 
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            logging.info(f"File saved to: {file_path}")
+        # Call main.py to process the uploaded file
+        command = [
+            "python",
+            "main.py",
+            file_path,
+            data_type,
+            platform
+        ]
+        logging.info(f"Executing: {' '.join(command)}")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
 
-            # Call main.py to process the uploaded file
-            command = [
-                "python",
-                "main.py",
-                file_path,
-                data_type,
-                platform
-            ]
-            logging.info(f"Executing: {' '.join(command)}")
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
+        if process.returncode != 0:
+            logging.error(f"Error processing file: {stderr.decode()}")
+            return jsonify({'error': f"File processing failed: {stderr.decode()}"}), 500
 
-            if process.returncode != 0:
-                logging.error(f"Error processing file: {stderr.decode()}")
-                return jsonify({'error': f"File processing failed: {stderr.decode()}"}), 500
-
-            logging.info(stdout.decode())
-            return jsonify({'message': 'File uploaded and processing initiated successfully.'}), 200
-        else:
-            return jsonify({'error': 'Invalid file format. Allowed formats: json'}), 400
+        logging.info(stdout.decode())
+        return jsonify({'message': 'File uploaded and processing initiated successfully.'}), 200
 
     except Exception as e:
         logging.exception("An error occurred during file upload and processing.")
