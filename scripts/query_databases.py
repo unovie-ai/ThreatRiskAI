@@ -63,20 +63,20 @@ def main():
     args = parser.parse_args()
 
     try:
+        subject = extract_subject(args.query)
+
         # Construct the llm similar command
         similar_command = [
             "llm", "similar", "threats",
             "-n", str(NUM_RESULTS),
             "-d", "db/threats.db",
-            "-c", f"\"{args.query}\""
+            "-c", f"\"{subject}\""
         ]
-
-        subject = extract_subject(args.query)
 
         # Construct the final llm command
         final_command = [
             "llm", "-m", LLM_MODEL,
-            f"\"{subject}\""
+            f"\"{args.query}\""
         ]
 
         logging.info(f"Executing command: {' '.join(similar_command)} | {' '.join(final_command)}")
