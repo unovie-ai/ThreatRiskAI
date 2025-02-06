@@ -71,10 +71,12 @@ def main():
             "-c", f"\"{args.query}\""
         ]
 
+        subject = extract_subject(args.query)
+
         # Construct the final llm command
         final_command = [
             "llm", "-m", LLM_MODEL,
-            f"\"{args.query}\""
+            f"\"{subject}\""
         ]
 
         logging.info(f"Executing command: {' '.join(similar_command)} | {' '.join(final_command)}")
