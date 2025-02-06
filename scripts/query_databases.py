@@ -80,7 +80,7 @@ def query_database(db_path, collection, subject):
             return None
 
         results = stdout.decode().strip()
-        logging.info(f"Query results from {db_path}/{collection}:\n{results}")
+        logging.debug(f"Query results from {db_path}/{collection}:\n{results}")
         return results
 
     except FileNotFoundError:
