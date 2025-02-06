@@ -90,18 +90,17 @@ def main():
 
         if final_process.returncode != 0:
             logging.error(f"Error generating final response: {stderr.decode()}")
-            return
+            return None
 
         response = stdout.decode().strip()
-        logging.info(f"Final LLM response:\n{response}")
-        print(response)
+        return response
 
     except FileNotFoundError:
         logging.error("llm command not found. Ensure it is installed and in your PATH.")
-        return
+        return None
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
-        return
+        return None
 
 if __name__ == "__main__":
     response = main()
