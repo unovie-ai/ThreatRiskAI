@@ -130,11 +130,18 @@ def main():
     parser.add_argument("query", help="The user's query.")
     args = parser.parse_args()
 
-    # Database and collection configurations (can be extended via .env)
-    databases = {
-        os.getenv("DB1_PATH", "db/cve.db"): [os.getenv("DB1_COLLECTION", "containers")],
-        os.getenv("DB2_PATH", "db/mitre.db"): [os.getenv("DB2_COLLECTION", "windows")]
-    }
+    # Database and collection configurations from .env
+    databases_str = os.getenv("DATABASES", "db/cve.db:containers,db/mitre.db:windows")
+    databases = {}
+    for db_collection in databases_str.split(','):
+        try:
+            db_path, collection = db_collection.split(':')
+            if db_path not in databases:
+                databases[db_path] = []
+            databases[db_path].append(collection)
+        except ValueError:
+            logging.warning(f"Invalid database:collection format: {db_collection}. Skipping.")
+            continue
 
     # 1. Extract the subject from the query
     subject = extract_subject(args.query)
