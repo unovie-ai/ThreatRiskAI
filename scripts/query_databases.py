@@ -39,9 +39,17 @@ def extract_subject(query):
             return None
 
         subject = stdout.decode().strip().split('\n')[0]  # Take the first line
+
         # Consider the first item inside ** **
         if "**" in subject:
             subject = subject.split("**")[1]
+        # Consider the first item inside ""
+        elif "\"" in subject:
+            subject = subject.split("\"")[1]
+
+        # Remove sentences like "The subject is", "The subjects are"
+        subject = re.sub(r"^(The subject is|The subjects are)\s*:\s*", "", subject, flags=re.IGNORECASE)
+
         logging.info(f"Extracted subject: {subject}")
         return subject
 
