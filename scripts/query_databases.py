@@ -4,6 +4,7 @@ import os
 import subprocess
 import dotenv
 import sqlite3
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
