@@ -39,6 +39,9 @@ def extract_subject(query):
             return None
 
         subject = stdout.decode().strip().split('\n')[0]  # Take the first line
+        # Consider the first item inside ** **
+        if "**" in subject:
+            subject = subject.split("**")[1]
         logging.info(f"Extracted subject: {subject}")
         return subject
 
