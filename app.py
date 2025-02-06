@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Swagger configuration
 swagger_config = {
+    "openapi": "3.0.0",
     "headers": [
     ],
     "specs": [
