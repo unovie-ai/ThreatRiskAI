@@ -103,12 +103,12 @@ def generate_final_response(query, context):
     """
     try:
         command = [
-            "llm", "-m", LLM_MODEL,
-            f"\"{query}\nContext:\n{context}\""
+            "llm", "-m", LLM_MODEL
         ]
+        input_text = f"{query}\nContext:\n{context}"
         logging.info(f"Executing command: {' '.join(command)}")
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate(input=input_text.encode('utf-8'))
 
         if process.returncode != 0:
             logging.error(f"Error generating final response: {stderr.decode()}")
