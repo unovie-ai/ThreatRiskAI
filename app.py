@@ -28,12 +28,12 @@ swagger_config = {
             "model_filter": lambda tag: True,  # all in
         }
     ],
-    "static_url_path": "/static",
+    "static_url_path": "/flasgger_static",
     "swagger_ui": True,
-    "specs_route": "/"
+    "specs_route": "/apidocs/"
 }
 
-swagger = Swagger(app, template_file='swagger.yml', config=swagger_config)
+swagger = Swagger(app, config=swagger_config)
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
