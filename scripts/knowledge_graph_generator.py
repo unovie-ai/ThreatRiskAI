@@ -183,16 +183,20 @@ def extract_cve_relationships(graph, data):
 
         # Add validated relationships only if both nodes exist
         if graph.has_node(cve_id) and graph.has_node(product_name):
+            edge_id = f"{cve_id}_AFFECTS_{product_name}"
             graph.add_edge(cve_id, product_name,
+                          id=edge_id,
                           Relationship="AFFECTS",
                           VersionRange=version,
                           AttackVector=product.get("attackVector", "network"),
                           CVEStatus=product.get("status", "confirmed"),
                           PatchStatus=product.get("patch", "unpatched"))
-            
+
             # Add vendor relationship with additional metadata
             if graph.has_node(vendor):
-                graph.add_edge(product_name, vendor, 
+                vendor_edge_id = f"{product_name}_BELONGS_TO_{vendor}"
+                graph.add_edge(product_name, vendor,
+                              id=vendor_edge_id,
                               Relationship="BELONGS_TO",
                               License=product.get("license", "unknown"),
                               SupportStatus=product.get("support_status", "unknown"))
@@ -300,8 +304,10 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
                    ID=technique_id,
                    Description=technique.get("description", ""),
                    KillChain=technique.get("kill_chain_phases", []))
-                   
+
+    edge_id = f"{parent_id}_CONTAINS_{technique_name}"
     graph.add_edge(parent_id, technique_name,
+                   id=edge_id,
                    Relationship="CONTAINS",
                    Subtype="Subtechnique" if "subtechnique" in technique_id else "Primary",
                    Mitigation=technique.get("x_mitre_mitigation", ""))
@@ -330,22 +336,31 @@ def save_knowledge_graph(graph, base_filename):
 
     # Save as combined CSV
     combined_path = f"{base_filename}.csv"
-    
     with open(combined_path, "w") as f:
         # Write header
         f.write("Node_ID,Node_Type,Attributes,Source_Node_ID,Target_Node_ID,Edge_Type\n")
-        
+
         # Write nodes
         for node_id, attributes in graph.nodes(data=True):
             node_type = attributes.get('type', 'unknown')
             attr_str = str({k: v for k, v in attributes.items() if k != 'type'})
             f.write(f'"{node_id}","{node_type}","{attr_str}",,,,\n')
-        
+
         # Write edges
         for source, target, data in graph.edges(data=True):
+            edge_id = data.get('id')
             edge_type = data.get('relation', 'unknown')
-            f.write(f',,,{source},{target},{edge_type}\n')
-    
+            if not edge_id:
+                logging.warning(f"Missing edge ID between {source} and {target}. Generating one.")
+                edge_id = f"{source}_relates_to_{target}"  # Generate a unique ID
+            f.write(f'"{edge_id}",,,{source},{target},{edge_type}\n')
+
+    # Validate that there are no blank IDs in the first column
+    with open(combined_path, "r") as f:
+        for line in f:
+            if line.startswith(","):
+                logging.error(f"Found line with missing ID: {line.strip()}")
+
     logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
 
 
