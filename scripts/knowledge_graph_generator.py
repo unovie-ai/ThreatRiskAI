@@ -2,9 +2,39 @@ import argparse
 import json
 import logging
 import os
+import re
 import networkx as nx
 import matplotlib.pyplot as plt
-import os
+from typing import Optional, List
+
+# Validation helpers
+def validate_mitre_id(mitre_id: str) -> bool:
+    """Validate MITRE ATT&CK ID format."""
+    return bool(re.match(r'^attack-pattern--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', mitre_id))
+
+def normalize_label(label: str) -> str:
+    """Clean and normalize labels for consistency."""
+    if not label:
+        return "MISSING_LABEL"
+    return re.sub(r'\s+', ' ', label.strip()).title()
+
+def get_normalized_vendor(vendor: Optional[str], product: str) -> str:
+    """Derive vendor from product name if not provided."""
+    if vendor and vendor.strip():
+        return normalize_label(vendor)
+    # Try to extract vendor from product name (e.g. "Microsoft Word" -> "Microsoft")
+    return normalize_label(product.split()[0]) if product else "UNKNOWN_VENDOR"
+
+def normalize_platform(platform: str) -> str:
+    """Standardize platform names."""
+    platform = platform.lower().strip()
+    if platform in ['win', 'windows']:
+        return "Windows"
+    elif platform in ['linux', 'gnu/linux']:
+        return "Linux"
+    elif platform in ['container', 'docker', 'kubernetes']:
+        return "Containers"
+    return platform.title() if platform else "Cross-Platform"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -97,19 +127,32 @@ def extract_cve_nodes(graph, data):
         if not product_name:
             continue
 
-        # Add product node with version info
-        vendor = product.get("vendor", "Unknown Vendor")
+        # Validate and normalize product/vendor information
+        vendor = get_normalized_vendor(product.get("vendor"), product_name)
+        product_name = normalize_label(product_name)
+        version = product.get("version") or "unversioned"
+        
+        # Only add nodes if we have valid identifiers
+        if not vendor or not product_name:
+            logging.warning(f"Skipping invalid product entry in CVE {cve_id}")
+            continue
 
-        # Add vendor node
-        graph.add_node(vendor, Type="Vendor", Label=vendor)
-
-        version = product.get("version", "Unknown Version")
+        # Add vendor node with enriched data
+        graph.add_node(vendor, 
+                      Type="Vendor",
+                      Label=vendor,
+                      Industry=product.get("industry", ""),
+                      Location=product.get("vendor_location", ""))
+        
+        # Add product node with validated attributes
         graph.add_node(product_name,
-                       Type="Product",
-                       Label=f"{vendor} {product_name}",
-                       Vendor=vendor,
-                       Version=version,
-                       Platform=product.get("platform", ""))
+                      Type="Product",
+                      Label=product_name,
+                      Vendor=vendor,
+                      Version=version,
+                      Platform=normalize_platform(product.get("platform", "")),
+                      EOL=product.get("end_of_life", ""),
+                      UpdateChannel=product.get("update_channel", ""))
 
 
 def extract_cve_relationships(graph, data):
@@ -138,14 +181,21 @@ def extract_cve_relationships(graph, data):
         vendor = product.get("vendor", "Unknown Vendor")
         version = product.get("version", "Unknown Version")
 
-        # Add versioned edge with CVE relationship
-        graph.add_edge(cve_id, product_name,
-                       Relationship="AFFECTS",
-                       VersionRange=version,
-                       AttackVector=product.get("attackVector", ""))
-
-        # Add BELONGS_TO relationship between Product and Vendor
-        graph.add_edge(product_name, vendor, Relationship="BELONGS_TO")
+        # Add validated relationships only if both nodes exist
+        if graph.has_node(cve_id) and graph.has_node(product_name):
+            graph.add_edge(cve_id, product_name,
+                          Relationship="AFFECTS",
+                          VersionRange=version,
+                          AttackVector=product.get("attackVector", "network"),
+                          CVEStatus=product.get("status", "confirmed"),
+                          PatchStatus=product.get("patch", "unpatched"))
+            
+            # Add vendor relationship with additional metadata
+            if graph.has_node(vendor):
+                graph.add_edge(product_name, vendor, 
+                              Relationship="BELONGS_TO",
+                              License=product.get("license", "unknown"),
+                              SupportStatus=product.get("support_status", "unknown"))
 
     # Extract descriptions and add them as nodes
     descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
@@ -190,14 +240,34 @@ def create_mitre_knowledge_graph(json_file_path):
             logging.warning(f"Skipping object with invalid MITRE ID: {mitre_id}")
             continue
 
-        # Add MITRE node with structured attributes
+        # Validate MITRE ID format and content
+        if not validate_mitre_id(mitre_id) or not attack_pattern.get("name"):
+            logging.warning(f"Skipping invalid MITRE entry: {mitre_id}")
+            continue
+            
+        tactic_names = [t.capitalize() for t in attack_pattern.get("x_mitre_tactic", [])]
+        platforms = [normalize_platform(p) for p in attack_pattern.get("x_mitre_platforms", [])]
+        
+        # Add MITRE technique node
+        technique_name = attack_pattern["name"]
         G.add_node(mitre_id,
-                   Type="MITRE",
-                   Label=attack_pattern.get("name", "Unknown Technique"),
-                   Tactic=attack_pattern.get("x_mitre_tactic", []),
-                   Platform=attack_pattern.get("x_mitre_platforms", []),
-                   Version=attack_pattern.get("x_mitre_version", ""),
-                   Source="MITRE ATT&CK")
+                  Type="Technique",
+                  Label=technique_name,
+                  Tactic=tactic_names,
+                  Platform=platforms,
+                  Version=attack_pattern.get("x_mitre_version", "1.0"),
+                  Source="MITRE ATT&CK",
+                  Description=attack_pattern.get("description", ""),
+                  Detection=attack_pattern.get("x_mitre_detection", ""))
+        
+        # Link techniques to their tactics
+        for tactic in tactic_names:
+            tactic_id = f"tactic_{tactic.lower().replace(' ', '_')}"
+            G.add_node(tactic_id, 
+                      Type="Tactic",
+                      Label=tactic,
+                      Framework="ATT&CK")
+            G.add_edge(mitre_id, tactic_id, Relationship="EMPLOYS")
 
         # Extract techniques and add them as nodes
         techniques = [obj for obj in objects if obj.get("type") == "attack-pattern"]
