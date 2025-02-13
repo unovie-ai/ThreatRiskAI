@@ -112,13 +112,18 @@ def extract_cve_nodes(graph, data):
         return
 
     # Add central CVE node with structured attributes
-    graph.add_node(cve_id,
+    cve_node_id = cve_id  # Use CVE ID as the node ID
+    severity = cve_metadata.get("severity", "Unknown")
+    published = cve_metadata.get("datePublished", "")
+    modified = cve_metadata.get("dateUpdated", "")
+    source = "NVD"
+
+    description = f"CVE {cve_id} is a vulnerability with severity {severity}, published on {published}, and last modified on {modified}. Source: {source}."
+
+    graph.add_node(cve_node_id,
                    Type="CVE",
                    Label=f"CVE-{cve_id}",
-                   Severity=cve_metadata.get("severity", "Unknown"),
-                   Published=cve_metadata.get("datePublished", ""),
-                   Modified=cve_metadata.get("dateUpdated", ""),
-                   Source="NVD")
+                   Description=description)
 
     # Extract affected products and add them as nodes
     affected_products = data.get("containers", {}).get("cna", {}).get("affected", [])
@@ -131,28 +136,36 @@ def extract_cve_nodes(graph, data):
         vendor = get_normalized_vendor(product.get("vendor"), product_name)
         product_name = normalize_label(product_name)
         version = product.get("version") or "unversioned"
-        
+
         # Only add nodes if we have valid identifiers
         if not vendor or not product_name:
             logging.warning(f"Skipping invalid product entry in CVE {cve_id}")
             continue
 
         # Add vendor node with enriched data
-        graph.add_node(vendor, 
+        vendor_node_id = vendor  # Use vendor name as node ID
+        industry = product.get("industry", "")
+        vendor_location = product.get("vendor_location", "")
+
+        vendor_description = f"Vendor {vendor} is in the {industry} industry and located in {vendor_location}."
+
+        graph.add_node(vendor_node_id,
                       Type="Vendor",
                       Label=vendor,
-                      Industry=product.get("industry", ""),
-                      Location=product.get("vendor_location", ""))
-        
+                      Description=vendor_description)
+
         # Add product node with validated attributes
-        graph.add_node(product_name,
+        product_node_id = product_name  # Use product name as node ID
+        platform = normalize_platform(product.get("platform", ""))
+        eol = product.get("end_of_life", "")
+        update_channel = product.get("update_channel", "")
+
+        product_description = f"Product {product_name} is made by {vendor}, version {version}, runs on {platform}, has EOL {eol}, and update channel {update_channel}."
+
+        graph.add_node(product_node_id,
                       Type="Product",
                       Label=product_name,
-                      Vendor=vendor,
-                      Version=version,
-                      Platform=normalize_platform(product.get("platform", "")),
-                      EOL=product.get("end_of_life", ""),
-                      UpdateChannel=product.get("update_channel", ""))
+                      Description=product_description)
 
 
 def extract_cve_relationships(graph, data):
@@ -180,33 +193,36 @@ def extract_cve_relationships(graph, data):
         # Add product node with version info
         vendor = product.get("vendor", "Unknown Vendor")
         version = product.get("version", "Unknown Version")
+        attack_vector = product.get("attackVector", "network")
+        cve_status = product.get("status", "confirmed")
+        patch_status = product.get("patch", "unpatched")
 
         # Add validated relationships only if both nodes exist
         if graph.has_node(cve_id) and graph.has_node(product_name):
             edge_id = f"{cve_id}_AFFECTS_{product_name}"
+            relationship_description = f"CVE {cve_id} affects product {product_name}, version range {version}, attack vector {attack_vector}, CVE status {cve_status}, and patch status {patch_status}."
             graph.add_edge(cve_id, product_name,
                           id=edge_id,
-                          Relationship="AFFECTS",
-                          VersionRange=version,
-                          AttackVector=product.get("attackVector", "network"),
-                          CVEStatus=product.get("status", "confirmed"),
-                          PatchStatus=product.get("patch", "unpatched"))
+                          Relationship=relationship_description)
 
             # Add vendor relationship with additional metadata
             if graph.has_node(vendor):
                 vendor_edge_id = f"{product_name}_BELONGS_TO_{vendor}"
+                license_info = product.get("license", "unknown")
+                support_status = product.get("support_status", "unknown")
+                vendor_relationship_description = f"Product {product_name} belongs to vendor {vendor}, with license {license_info} and support status {support_status}."
+
                 graph.add_edge(product_name, vendor,
                               id=vendor_edge_id,
-                              Relationship="BELONGS_TO",
-                              License=product.get("license", "unknown"),
-                              SupportStatus=product.get("support_status", "unknown"))
+                              Relationship=vendor_relationship_description)
 
     # Extract descriptions and add them as nodes
     descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
     for description in descriptions:
         description_text = description.get("value", "No Description")
-        graph.add_node(description_text, type="description", **description)
-        graph.add_edge(cve_id, description_text, relation="describes")
+        description_node_id = description_text  # Use description text as node ID
+        graph.add_node(description_node_id, Type="description", Label="Description", Description=description_text)
+        graph.add_edge(cve_id, description_node_id, relation="describes")
 
 
 def create_mitre_knowledge_graph(json_file_path):
@@ -297,18 +313,24 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
     if not technique_id or not technique_id.startswith("attack-pattern--"):
         logging.warning(f"Skipping invalid technique ID: {technique_id}")
         return
-        
-    graph.add_node(technique_name,
+
+    technique_node_id = technique_id  # Use technique_id as node ID
+    technique_name = technique.get("name", "Unknown Technique")
+    description = technique.get("description", "")
+    kill_chain = technique.get("kill_chain_phases", [])
+
+    technique_description = f"Technique {technique_name} (ID: {technique_id}) is a MITRE ATT&CK technique with description: {description} and kill chain phases: {kill_chain}."
+
+    graph.add_node(technique_node_id,
                    Type="Technique",
-                   Label=technique.get("name", "Unknown Technique"),
-                   ID=technique_id,
-                   Description=technique.get("description", ""),
-                   KillChain=technique.get("kill_chain_phases", []))
+                   Label=technique_name,
+                   Description=technique_description)
 
     edge_id = f"{parent_id}_CONTAINS_{technique_name}"
+    relationship_description = f"{parent_id} contains technique {technique_name}."
     graph.add_edge(parent_id, technique_name,
                    id=edge_id,
-                   Relationship="CONTAINS",
+                   Relationship=relationship_description,
                    Subtype="Subtechnique" if "subtechnique" in technique_id else "Primary",
                    Mitigation=technique.get("x_mitre_mitigation", ""))
 
@@ -338,28 +360,23 @@ def save_knowledge_graph(graph, base_filename):
     combined_path = f"{base_filename}.csv"
     with open(combined_path, "w") as f:
         # Write header
-        f.write("Node_ID,Node_Type,Attributes,Source_Node_ID,Target_Node_ID,Edge_Type\n")
+        f.write("ID,Text\n")
 
         # Write nodes
         for node_id, attributes in graph.nodes(data=True):
-            node_type = attributes.get('type', 'unknown')
-            attr_str = str({k: v for k, v in attributes.items() if k != 'type'})
-            f.write(f'"{node_id}","{node_type}","{attr_str}",,,,\n')
+            node_type = attributes.get('Type', 'unknown')
+            description = attributes.get('Description', 'No description')
+            text = f"{node_type}: {description}"
+            f.write(f'"{node_id}","{text}"\n')
 
         # Write edges
         for source, target, data in graph.edges(data=True):
             edge_id = data.get('id')
-            edge_type = data.get('relation', 'unknown')
+            relationship = data.get('Relationship', 'No relationship')
             if not edge_id:
                 logging.warning(f"Missing edge ID between {source} and {target}. Generating one.")
                 edge_id = f"{source}_relates_to_{target}"  # Generate a unique ID
-            f.write(f'"{edge_id}",,,{source},{target},{edge_type}\n')
-
-    # Validate that there are no blank IDs in the first column
-    with open(combined_path, "r") as f:
-        for line in f:
-            if line.startswith(","):
-                logging.error(f"Found line with missing ID: {line.strip()}")
+            f.write(f'"{edge_id}","{relationship}"\n')
 
     logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
 
