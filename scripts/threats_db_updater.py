@@ -13,12 +13,13 @@ EMBEDDING_MODEL = "jina-embeddings-v2-small-en"
 DB_FILE = "threats.db"
 COLLECTION_NAME = "threats"
 
-def update_threats_database(csv_file_path):
+def update_threats_database(csv_file_path, data_type):
     """
     Creates or updates a threats database and embeds the knowledge graph data.
 
     Args:
         csv_file_path (str): The path to the knowledge graph CSV file.
+        data_type (str): The type of data (e.g., cve or mitre).
     """
     db_path = os.path.join(DB_DIR, DB_FILE)
 
@@ -77,9 +78,10 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Create or update a threats database and embed knowledge graph data.")
     parser.add_argument("csv_file_path", help="Path to the knowledge graph CSV file")
+    parser.add_argument("data_type", help="Type of data (cve or mitre)")
     args = parser.parse_args()
 
-    update_threats_database(args.csv_file_path)
+    update_threats_database(args.csv_file_path, args.data_type)
 
 
 if __name__ == "__main__":
