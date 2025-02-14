@@ -207,7 +207,7 @@ def extract_cve_relationships(graph, data):
 
             # Add vendor relationship with additional metadata
             if graph.has_node(vendor):
-                vendor_edge_id = f"{product_node_id}_BELONGS_TO_{vendor_node_id}"
+                vendor_edge_id = f"{product_name}_BELONGS_TO_{vendor}"
                 license_info = product.get("license", "unknown")
                 support_status = product.get("support_status", "unknown")
                 vendor_relationship_description = f"Product {product_name} belongs to vendor {vendor}, with license {license_info} and support status {support_status}."
