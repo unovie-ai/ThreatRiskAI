@@ -190,8 +190,11 @@ def extract_cve_relationships(graph, data):
         if not product_name:
             continue
 
+        # Validate and normalize product/vendor information
+        vendor = get_normalized_vendor(product.get("vendor"), product_name)
+        product_name = normalize_label(product_name)
+
         # Add product node with version info
-        vendor = product.get("vendor", "Unknown Vendor")
         version = product.get("version", "Unknown Version")
         attack_vector = product.get("attackVector", "network")
         cve_status = product.get("status", "confirmed")
@@ -199,30 +202,33 @@ def extract_cve_relationships(graph, data):
 
         # Add validated relationships only if both nodes exist
         if graph.has_node(cve_id) and graph.has_node(product_name):
-            edge_id = f"{cve_id}_AFFECTS_{product_name}"
+            edge_id = f"CVE_{cve_id}_AFFECTS_PRODUCT_{product_name}"
             relationship_description = f"CVE {cve_id} affects product {product_name}, version range {version}, attack vector {attack_vector}, CVE status {cve_status}, and patch status {patch_status}."
             graph.add_edge(cve_id, product_name,
                           id=edge_id,
-                          Relationship=relationship_description)
+                          Relationship=relationship_description,
+                          Type="AFFECTS")
 
-            # Add vendor relationship with additional metadata
-            if graph.has_node(vendor):
-                vendor_edge_id = f"{product_name}_BELONGS_TO_{vendor}"
-                license_info = product.get("license", "unknown")
-                support_status = product.get("support_status", "unknown")
-                vendor_relationship_description = f"Product {product_name} belongs to vendor {vendor}, with license {license_info} and support status {support_status}."
+        # Add vendor relationship with additional metadata
+        if graph.has_node(product_name) and graph.has_node(vendor):
+            vendor_edge_id = f"PRODUCT_{product_name}_BELONGS_TO_VENDOR_{vendor}"
+            license_info = product.get("license", "unknown")
+            support_status = product.get("support_status", "unknown")
+            vendor_relationship_description = f"Product {product_name} belongs to vendor {vendor}, with license {license_info} and support status {support_status}."
 
-                graph.add_edge(product_name, vendor,
-                              id=vendor_edge_id,
-                              Relationship=vendor_relationship_description)
+            graph.add_edge(product_name, vendor,
+                          id=vendor_edge_id,
+                          Relationship=vendor_relationship_description,
+                          Type="BELONGS_TO")
 
     # Extract descriptions and add them as nodes
     descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
     for description in descriptions:
         description_text = description.get("value", "No Description")
-        description_node_id = description_text  # Use description text as node ID
-        graph.add_node(description_node_id, Type="description", Label="Description", Description=description_text)
-        graph.add_edge(cve_id, description_node_id, relation="describes")
+        description_node_id = f"DESCRIPTION_{hash(description_text)}"  # Use description text as node ID
+        if not graph.has_node(description_node_id):
+            graph.add_node(description_node_id, Type="Description", Label="Description", Description=description_text)
+        graph.add_edge(cve_id, description_node_id, relation="describes", Type="DESCRIBES")
 
 
 def create_mitre_knowledge_graph(json_file_path, args):
@@ -309,30 +315,33 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
     """
     technique_id = technique.get("id")
     technique_name = technique.get("name", "Unknown Technique")
+
     # Add technique with validation
     if not technique_id or not technique_id.startswith("attack-pattern--"):
         logging.warning(f"Skipping invalid technique ID: {technique_id}")
         return
 
     technique_node_id = technique_id  # Use technique_id as node ID
-    technique_name = technique.get("name", "Unknown Technique")
     description = technique.get("description", "")
     kill_chain = technique.get("kill_chain_phases", [])
 
     technique_description = f"Technique {technique_name} (ID: {technique_id}) is a MITRE ATT&CK technique with description: {description} and kill chain phases: {kill_chain}."
 
-    graph.add_node(technique_node_id,
-                   Type="Technique",
-                   Label=technique_name,
-                   Description=technique_description)
+    if not graph.has_node(technique_node_id):
+        graph.add_node(technique_node_id,
+                       Type="Technique",
+                       Label=technique_name,
+                       Description=technique_description)
 
-    edge_id = f"{parent_id}_CONTAINS_{technique_name}"
+    edge_id = f"TECHNIQUE_{parent_id}_CONTAINS_TECHNIQUE_{technique_name}"
     relationship_description = f"{parent_id} contains technique {technique_name}."
-    graph.add_edge(parent_id, technique_name,
-                   id=edge_id,
-                   Relationship=relationship_description,
-                   Subtype="Subtechnique" if "subtechnique" in technique_id else "Primary",
-                   Mitigation=technique.get("x_mitre_mitigation", ""))
+    if graph.has_node(parent_id) and graph.has_node(technique_node_id):
+        graph.add_edge(parent_id, technique_node_id,
+                       id=edge_id,
+                       Relationship=relationship_description,
+                       Type="CONTAINS",
+                       Subtype="Subtechnique" if "subtechnique" in technique_id else "Primary",
+                       Mitigation=technique.get("x_mitre_mitigation", ""))
 
     # Find sub-techniques
     sub_techniques_relationships = [obj for obj in objects if obj.get("type") == "relationship" and obj.get("source_ref") == technique_id and obj.get("relationship_type") == "subtechnique-of"]
@@ -340,7 +349,7 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
         sub_technique_id = relationship.get("target_ref")
         sub_technique = next((obj for obj in objects if obj.get("id") == sub_technique_id), None)
         if sub_technique:
-            add_technique_and_subtechniques(graph, technique_name, sub_technique, objects)
+            add_technique_and_subtechniques(graph, technique_node_id, sub_technique, objects)
 
 
 def save_knowledge_graph(graph, base_filename):
@@ -373,12 +382,11 @@ def save_knowledge_graph(graph, base_filename):
         for source, target, data in graph.edges(data=True):
             edge_id = data.get('id')
             relationship = data.get('Relationship', 'No relationship')
-            source_type = graph.nodes[source].get('Type', 'Unknown')
-            target_type = graph.nodes[target].get('Type', 'Unknown')
+            edge_type = data.get('Type', 'Unknown')
             if not edge_id:
                 logging.warning(f"Missing edge ID between {source} and {target}. Generating one.")
-                edge_id = f"{source_type}_{source}_relates_to_{target_type}_{target}".replace(" ", "_")  # Generate a unique ID
-            f.write(f'"{edge_id}","{relationship}"\n')
+                edge_id = f"{source}_relates_to_{target}".replace(" ", "_")  # Generate a unique ID
+            f.write(f'"{edge_id}","{relationship} ({edge_type})"\n')
 
     logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
 
