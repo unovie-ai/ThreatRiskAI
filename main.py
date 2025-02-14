@@ -136,12 +136,13 @@ def main():
         if not args.skip_kg:
             csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type)
             if csv_file_path:
-                # Call threats_db_updater.py to embed the knowledge graph into the database
+                # Call db_updater_row.py to embed the knowledge graph into the database row by row
                 command = [
                     "python",
-                    "scripts/threats_db_updater.py",
+                    "scripts/db_updater_row.py",
                     csv_file_path,
-                    args.data_type
+                    args.data_type,
+                    args.platform
                 ]
                 logging.info(f"Executing: {' '.join(command)}")
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
