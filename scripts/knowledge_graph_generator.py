@@ -47,7 +47,7 @@ VISUALIZATION_DIR = os.path.join(KNOWLEDGE_GRAPHS_DIR, "visualization")
 CYTOSCAPE_DIR = os.path.join(VISUALIZATION_DIR, "cytoscape")
 
 
-def create_knowledge_graph(json_file_path, data_type):
+def create_knowledge_graph(json_file_path, data_type, args):
     """
     Creates a knowledge graph from a JSON file.
 
@@ -59,15 +59,15 @@ def create_knowledge_graph(json_file_path, data_type):
         networkx.Graph: The knowledge graph.
     """
     if data_type == "cve":
-        return create_cve_knowledge_graph(json_file_path)
+        return create_cve_knowledge_graph(json_file_path, args)
     elif data_type == "mitre":
-        return create_mitre_knowledge_graph(json_file_path)
+        return create_mitre_knowledge_graph(json_file_path, args)
     else:
         logging.error(f"Unsupported data type: {data_type}")
         return None
 
 
-def create_cve_knowledge_graph(json_file_path):
+def create_cve_knowledge_graph(json_file_path, args):
     """
     Creates a knowledge graph from a CVE JSON file.
 
@@ -225,7 +225,7 @@ def extract_cve_relationships(graph, data):
         graph.add_edge(cve_id, description_node_id, relation="describes")
 
 
-def create_mitre_knowledge_graph(json_file_path):
+def create_mitre_knowledge_graph(json_file_path, args):
     """
     Creates a knowledge graph from a MITRE ATT&CK JSON file.
 
@@ -568,7 +568,7 @@ def main():
     os.makedirs(VISUALIZATION_DIR, exist_ok=True)
 
     # Create the knowledge graph
-    graph = create_knowledge_graph(args.json_file_path, args.data_type)
+    graph = create_knowledge_graph(args.json_file_path, args.data_type, args)
     if graph is None:
         logging.error("Failed to create knowledge graph.")
         return
