@@ -69,31 +69,27 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                 content = "\\n".join(row.values())  # Concatenate all values in the row
 
                 # Determine the llm command based on data type
-                if data_type.upper() == "CVE":
-                    llm_command = [
-                        "llm", "embed", platform,
-                        "-m", EMBEDDING_MODEL,
-                        "-d", db_path,
-                        "--id", row_id,
-                        content
-                    ]
-                elif data_type.upper() == "MITRE":
-                    llm_command = [
-                        "llm", "embed", platform,
-                        "-m", EMBEDDING_MODEL,
-                        "-d", db_path,
-                        "--id", row_id,
-                        content
-                    ]
-                else:
-                    logging.error(f"Unsupported data type: {data_type}. Must be 'CVE' or 'MITRE'.")
-                    failure_count += 1
-                    continue
+                object_id = row_id
+                object_content = content
+
+                llm_command = [
+                    "llm",
+                    "embed",
+                    platform,
+                    str(object_id),
+                    "-m",
+                    EMBEDDING_MODEL,
+                    "-d",
+                    db_path,
+                    "-c",
+                    object_content,
+                    "--store"
+                ]
 
                 try:
                     # Execute the llm command
                     logging.info(f"Executing command: {' '.join(llm_command)}")
-                    subprocess.run(llm_command, input=content, text=True, check=True)
+                    subprocess.run(llm_command, text=True, check=True)
                     success_count += 1
                     row_end_time = time.time()
                     logging.info(f"Successfully embedded row {row_count} (ID: {row_id}) in {row_end_time - row_start_time:.2f} seconds.")
