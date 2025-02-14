@@ -54,10 +54,16 @@ def process_data(json_file_path, data_type, platform):
         stdout, stderr = process.communicate()
 
         if process.returncode != 0:
-            logging.error(f"Error processing {data_type}  {stderr.decode()}")
+            logging.error(f"Error processing {data_type}: {stderr.decode()}")
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
             return None
 
         logging.info(stdout.decode())
+        if args.verbose:
+            logging.debug(f"STDOUT: {stdout.decode()}")
+            logging.debug(f"STDERR: {stderr.decode()}")
         return output_file_path
 
     except ValueError as e:
@@ -99,9 +105,15 @@ def generate_knowledge_graph(json_file_path, data_type):
 
         if process.returncode != 0:
             logging.error(f"Error generating knowledge graph: {stderr.decode()}")
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
             return None
         else:
             logging.info(stdout.decode())
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
             return csv_file_path
 
     except FileNotFoundError:
@@ -150,8 +162,14 @@ def main():
 
                 if process.returncode != 0:
                     logging.error(f"Error updating database: {stderr.decode()}")
+                    if args.verbose:
+                        logging.debug(f"STDOUT: {stdout.decode()}")
+                        logging.debug(f"STDERR: {stderr.decode()}")
                 else:
                     logging.info(stdout.decode())
+                    if args.verbose:
+                        logging.debug(f"STDOUT: {stdout.decode()}")
+                        logging.debug(f"STDERR: {stderr.decode()}")
             else:
                 logging.error("Knowledge graph generation failed.")
     else:
