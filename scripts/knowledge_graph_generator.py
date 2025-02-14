@@ -207,7 +207,7 @@ def extract_cve_relationships(graph, data):
 
             # Add vendor relationship with additional metadata
             if graph.has_node(vendor):
-                vendor_edge_id = f"{product_name}_BELONGS_TO_{vendor}"
+                vendor_edge_id = f"{product_node_id}_BELONGS_TO_{vendor_node_id}"
                 license_info = product.get("license", "unknown")
                 support_status = product.get("support_status", "unknown")
                 vendor_relationship_description = f"Product {product_name} belongs to vendor {vendor}, with license {license_info} and support status {support_status}."
@@ -375,7 +375,7 @@ def save_knowledge_graph(graph, base_filename):
             relationship = data.get('Relationship', 'No relationship')
             if not edge_id:
                 logging.warning(f"Missing edge ID between {source} and {target}. Generating one.")
-                edge_id = f"{source}_relates_to_{target}"  # Generate a unique ID
+                edge_id = f"{source}_relates_to_{target}".replace(" ", "_")  # Generate a unique ID
             f.write(f'"{edge_id}","{relationship}"\n')
 
     logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
