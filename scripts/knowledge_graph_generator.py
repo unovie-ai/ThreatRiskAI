@@ -373,9 +373,11 @@ def save_knowledge_graph(graph, base_filename):
         for source, target, data in graph.edges(data=True):
             edge_id = data.get('id')
             relationship = data.get('Relationship', 'No relationship')
+            source_type = graph.nodes[source].get('Type', 'Unknown')
+            target_type = graph.nodes[target].get('Type', 'Unknown')
             if not edge_id:
                 logging.warning(f"Missing edge ID between {source} and {target}. Generating one.")
-                edge_id = f"{source}_relates_to_{target}".replace(" ", "_")  # Generate a unique ID
+                edge_id = f"{source_type}_{source}_relates_to_{target_type}_{target}".replace(" ", "_")  # Generate a unique ID
             f.write(f'"{edge_id}","{relationship}"\n')
 
     logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
