@@ -88,10 +88,10 @@ def main():
             ]
 
             logging.info(f"Executing command: {' '.join(similar_command)}")
-            similar_process = subprocess.Popen(similar_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = similar_process.communicate()
+            process = subprocess.Popen(similar_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
 
-            if similar_process.returncode != 0:
+            if process.returncode != 0:
                 logging.error(f"Error querying database {db_path}: {stderr.decode()}")
                 continue
 
