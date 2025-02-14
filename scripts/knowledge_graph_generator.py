@@ -573,6 +573,11 @@ def main():
         logging.error("Failed to create knowledge graph.")
         return
 
+    num_nodes = graph.number_of_nodes()
+    num_edges = graph.number_of_edges()
+
+    logging.info(f"Knowledge graph contains {num_nodes} nodes and {num_edges} edges.")
+
     # Save the knowledge graph
     base_filename = os.path.join(KNOWLEDGE_GRAPHS_DIR, file_name)
     save_knowledge_graph(graph, base_filename)
