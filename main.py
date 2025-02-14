@@ -11,7 +11,7 @@ OUTPUT_DIR = "output"
 # Default logging level
 DEFAULT_LOG_LEVEL = logging.INFO
 
-def process_data(json_file_path, data_type, platform):
+def process_data(json_file_path, data_type, platform, args):
     """
     Processes data based on the specified data type (MITRE or CVE).
 
@@ -76,7 +76,7 @@ def process_data(json_file_path, data_type, platform):
         logging.error(f"An unexpected error occurred: {str(e)}")
         return None
 
-def generate_knowledge_graph(json_file_path, data_type):
+def generate_knowledge_graph(json_file_path, data_type, args):
     """
     Generates a knowledge graph from the processed JSON file and returns the path to the generated CSV file.
 
@@ -141,12 +141,12 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Process the data
-    processed_file_path = process_data(args.json_file_path, args.data_type, args.platform)
+    processed_file_path = process_data(args.json_file_path, args.data_type, args.platform, args)
 
     if processed_file_path:
         logging.info(f"Processed data saved to: {processed_file_path}")
         if not args.skip_kg:
-            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type)
+            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
             if csv_file_path:
                 # Call db_updater_row.py to embed the knowledge graph into the database row by row
                 command = [
