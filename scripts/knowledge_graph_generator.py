@@ -225,10 +225,16 @@ def extract_cve_relationships(graph, data):
     descriptions = data.get("containers", {}).get("cna", {}).get("descriptions", [])
     for description in descriptions:
         description_text = description.get("value", "No Description")
-        description_node_id = f"DESCRIPTION_{hash(description_text)}"  # Use description text as node ID
-        if not graph.has_node(description_node_id):
-            graph.add_node(description_node_id, Type="Description", Label="Description", Description=description_text)
-        graph.add_edge(cve_id, description_node_id, relation="describes", Type="DESCRIBES")
+        if description_text and description_text.strip():
+            description_node_id = f"DESCRIPTION_{hash(description_text)}"  # Use description text as node ID
+            if not graph.has_node(description_node_id):
+                graph.add_node(description_node_id, Type="Description", Label="Description", Description=description_text)
+            
+            # Generate a unique edge ID
+            edge_id = f"CVE_{cve_id}_DESCRIBES_{description_node_id}"
+            graph.add_edge(cve_id, description_node_id, id=edge_id, relation="describes", Type="DESCRIBES")
+        else:
+            logging.warning(f"Empty description for CVE {cve_id}. Skipping description node creation.")
 
 
 def create_mitre_knowledge_graph(json_file_path, args):
