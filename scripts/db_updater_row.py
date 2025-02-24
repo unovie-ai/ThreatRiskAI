@@ -5,6 +5,7 @@ import subprocess
 import sqlite3
 import csv
 import time
+import json
 import uuid
 
 # Configure logging
