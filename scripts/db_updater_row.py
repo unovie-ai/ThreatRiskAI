@@ -60,16 +60,16 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
     success_count = 0
     failure_count = 0
 
-    # Fetch all existing IDs in the collection
-    existing_ids = set()
+    # Fetch all existing IDs and content in the collection
+    existing_data = {}
     if collection_exists:
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
-            cursor.execute(f"SELECT id FROM {platform}")
-            existing_ids = {row[0] for row in cursor.fetchall()}
+            cursor.execute(f"SELECT id, content FROM {platform}")
+            existing_data = {row[0]: row[1] for row in cursor.fetchall()}
             conn.close()
-            logging.info(f"Found {len(existing_ids)} existing embeddings in collection: {platform}")
+            logging.info(f"Found {len(existing_data)} existing embeddings in collection: {platform}")
         except sqlite3.Error as e:
             logging.error(f"Error fetching existing IDs: {e}")
             return
