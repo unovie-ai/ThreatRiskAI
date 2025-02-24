@@ -143,11 +143,12 @@ def extract_cve_nodes(graph, data):
             continue
 
         # Add vendor node with enriched data
-        vendor_node_id = vendor  # Use vendor name as node ID
-        industry = product.get("industry", "")
-        vendor_location = product.get("vendor_location", "")
+        vendor_node_id = f"VENDOR_{vendor}"  # Use vendor name as node ID
+        industry = product.get("industry", "Unknown Industry")
+        vendor_location = product.get("vendor_location", "Unknown Location")
+        vendor_website = product.get("vendor_website", "Unknown Website")
 
-        vendor_description = f"Vendor {vendor} is in the {industry} industry and located in {vendor_location}."
+        vendor_description = f"Vendor {vendor} is in the {industry} industry, located in {vendor_location}, with website {vendor_website}."
 
         graph.add_node(vendor_node_id,
                       Type="Vendor",
@@ -155,10 +156,10 @@ def extract_cve_nodes(graph, data):
                       Description=vendor_description)
 
         # Add product node with validated attributes
-        product_node_id = product_name  # Use product name as node ID
-        platform = normalize_platform(product.get("platform", ""))
-        eol = product.get("end_of_life", "")
-        update_channel = product.get("update_channel", "")
+        product_node_id = f"PRODUCT_{product_name}"  # Use product name as node ID
+        platform = normalize_platform(product.get("platform", "Unknown Platform"))
+        eol = product.get("end_of_life", "Unknown EOL")
+        update_channel = product.get("update_channel", "Unknown Update Channel")
 
         product_description = f"Product {product_name} is made by {vendor}, version {version}, runs on {platform}, has EOL {eol}, and update channel {update_channel}."
 
@@ -201,22 +202,25 @@ def extract_cve_relationships(graph, data):
         patch_status = product.get("patch", "unpatched")
 
         # Add validated relationships only if both nodes exist
-        if graph.has_node(cve_id) and graph.has_node(product_name):
+        product_node_id = f"PRODUCT_{product_name}"
+        vendor_node_id = f"VENDOR_{vendor}"
+
+        if graph.has_node(cve_id) and graph.has_node(product_node_id):
             edge_id = f"CVE_{cve_id}_AFFECTS_PRODUCT_{product_name}"
             relationship_description = f"CVE {cve_id} affects product {product_name}, version range {version}, attack vector {attack_vector}, CVE status {cve_status}, and patch status {patch_status}."
-            graph.add_edge(cve_id, product_name,
+            graph.add_edge(cve_id, product_node_id,
                           id=edge_id,
                           Relationship=relationship_description,
                           Type="AFFECTS")
 
         # Add vendor relationship with additional metadata
-        if graph.has_node(product_name) and graph.has_node(vendor):
+        if graph.has_node(product_node_id) and graph.has_node(vendor_node_id):
             vendor_edge_id = f"PRODUCT_{product_name}_BELONGS_TO_VENDOR_{vendor}"
             license_info = product.get("license", "unknown")
             support_status = product.get("support_status", "unknown")
             vendor_relationship_description = f"Product {product_name} belongs to vendor {vendor}, with license {license_info} and support status {support_status}."
 
-            graph.add_edge(product_name, vendor,
+            graph.add_edge(product_node_id, vendor_node_id,
                           id=vendor_edge_id,
                           Relationship=vendor_relationship_description,
                           Type="BELONGS_TO")
