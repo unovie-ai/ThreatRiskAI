@@ -87,6 +87,11 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                 object_id = row_id
                 object_content = content
 
+                # Check if the content already exists
+                if object_content in existing_data.values():
+                    logging.warning(f"Content already exists in collection: {platform}. Skipping.")
+                    continue
+
                 llm_command = [
                     "llm",
                     "embed",
@@ -100,11 +105,6 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                     object_content,
                     "--store"
                 ]
-                # Skip if the embedding already exists
-                if str(object_id) in existing_ids:
-                    logging.warning(f"Embedding already exists for ID: {object_id} in collection: {platform}. Skipping.")
-                    continue
-
                 try:
                     # Execute the llm command
                     logging.info(f"Executing command: {' '.join(llm_command)}")
