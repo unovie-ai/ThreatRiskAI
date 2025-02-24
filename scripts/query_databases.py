@@ -13,12 +13,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 dotenv.load_dotenv()
 
 # Constants from environment variables
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.0-flash-exp")  # Default model if not in .env
-NUM_RESULTS = int(os.getenv("NUM_RESULTS", "10"))  # Default number of results if not in .env
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.0-flash-exp")
+NUM_RESULTS = int(os.getenv("NUM_RESULTS", "10"))
+DATABASE_COLLECTIONS = os.getenv("DATABASE_COLLECTIONS", "db/threats.db:threats")
 
 def extract_subject(query):
-    """
-    Extracts the subject from the query using an LLM.
+    """Extracts the subject from the query using an LLM.
 
     Args:
         query (str): The user's query.
@@ -61,40 +61,53 @@ def extract_subject(query):
         logging.error(f"An unexpected error occurred: {e}")
         return None
 
-
-
 def main():
-    """
-    Main function to orchestrate the database querying and response generation process.
-    """
+    """Main function to orchestrate the database querying and response generation process."""
     parser = argparse.ArgumentParser(description="Query a database and generate a final LLM response.")
     parser.add_argument("query", help="The user's query.")
     args = parser.parse_args()
 
     try:
         subject = extract_subject(args.query)
+        if not subject:
+            logging.error("Failed to extract subject from query.")
+            return None
 
-        # Construct the llm similar command
-        similar_command = [
-            "llm", "similar", "threats",
-            "-n", str(NUM_RESULTS),
-            "-d", "db/threats.db",
-            "-c", f"\"{subject}\""
-        ]
+        # Fetch database and collection pairs from environment variable
+        db_collection_pairs = [pair.split(":") for pair in DATABASE_COLLECTIONS.split(",")]
+
+        # Collect similar results from all databases
+        similar_results = []
+        for db_path, collection_name in db_collection_pairs:
+            # Construct the llm similar command
+            similar_command = [
+                "llm", "similar", collection_name,
+                "-n", str(NUM_RESULTS),
+                "-d", db_path,
+                "-c", f"\"{subject}\""
+            ]
+
+            logging.info(f"Executing command: {' '.join(similar_command)}")
+            process = subprocess.Popen(similar_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0:
+                logging.error(f"Error querying database {db_path}: {stderr.decode()}")
+                continue
+
+            similar_results.append(stdout.decode().strip())
+
+        # Concatenate the results
+        combined_results = "\\n".join(similar_results)
 
         # Construct the final llm command
         final_command = [
             "llm", "-m", LLM_MODEL,
-            f"\"{args.query}\""
+            f"\"{args.query}\\nContext:\\n{combined_results}\""
         ]
 
-        logging.info(f"Executing command: {' '.join(similar_command)} | {' '.join(final_command)}")
-
-        # Execute the llm similar command and pipe its output to the final llm command
-        similar_process = subprocess.Popen(similar_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        final_process = subprocess.Popen(final_command, stdin=similar_process.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # Capture the output from the final llm command
+        logging.info(f"Executing final command: {' '.join(final_command)}")
+        final_process = subprocess.Popen(final_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = final_process.communicate()
 
         if final_process.returncode != 0:

@@ -13,7 +13,7 @@ PLATFORM_MAPPING = {
 }
 
 
-def process_cve(json_file_path, platform):
+def process_cve(json_file_path, platform, args):
     """
     Processes a CVE JSON file, filtering records based on the specified platform.
 
@@ -113,11 +113,11 @@ def process_cve(json_file_path, platform):
     if primary_check(cve_data, platform):
         logging.info(f"CVE {cve_id} passed primary platform check")
         return cve_data
-        
+
     if secondary_check(cve_data, platform):
         logging.info(f"CVE {cve_id} passed secondary product/vendor name check")
         return cve_data
-        
+
     if tertiary_check(cve_data, platform):
         logging.info(f"CVE {cve_id} passed tertiary description check")
         return cve_data
@@ -148,7 +148,7 @@ def main():
 
     try:
         logging.info(f"Starting CVE processing for {args.json_file_path}")
-        processed_data = process_cve(args.json_file_path, args.platform)
+        processed_data = process_cve(args.json_file_path, args.platform, args)
 
         if processed_data is not None:
             cve_id = processed_data.get('cveMetadata', {}).get('cveId', 'Unknown CVE ID')

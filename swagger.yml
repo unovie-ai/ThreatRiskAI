@@ -1,0 +1,142 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Threat Intelligence API
+  description: API for uploading threat data and querying the threat intelligence database.
+
+servers:
+  - url: http://localhost:5000/
+    description: Local development server
+
+paths:
+  /upload:
+    post:
+      summary: Upload a threat data file for processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data_type:
+                  type: string
+                  enum: ["CVE", "MITRE"]
+                  description: Type of data (CVE or MITRE)
+                platform:
+                  type: string
+                  description: Target platform (e.g., containers, Windows)
+                file_content:
+                  type: string
+                  description: JSON file content as a string
+              required:
+                - data_type
+                - platform
+                - file_content
+      responses:
+        '200':
+          description: File uploaded and processing initiated successfully
+        '400':
+          description: Invalid request parameters or file format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+  /query:
+    get:
+      summary: Query the threat intelligence database
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+          required: true
+          description: The query string to search the database
+      responses:
+        '200':
+          description: Successful query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: The query result
+        '400':
+          description: Query parameter is missing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+components:
+  schemas:
+    UploadRequest:
+      type: object
+      properties:
+        data_type:
+          type: string
+          enum: ["CVE", "MITRE"]
+          description: Type of data (CVE or MITRE)
+        platform:
+          type: string
+          description: Target platform (e.g., containers, Windows)
+        file_content:
+          type: string
+          description: JSON file content as a string
+      required:
+        - data_type
+        - platform
+        - file_content
+    QueryRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          description: The query string to search the database
+      required:
+        - query
+    QueryResponse:
+      type: object
+      properties:
+        result:
+          type: string
+          description: The query result
+      required:
+        - result
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error

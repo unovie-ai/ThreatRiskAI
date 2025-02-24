@@ -11,7 +11,7 @@ OUTPUT_DIR = "output"
 # Default logging level
 DEFAULT_LOG_LEVEL = logging.INFO
 
-def process_data(json_file_path, data_type, platform):
+def process_data(json_file_path, data_type, platform, args):
     """
     Processes data based on the specified data type (MITRE or CVE).
 
@@ -54,10 +54,16 @@ def process_data(json_file_path, data_type, platform):
         stdout, stderr = process.communicate()
 
         if process.returncode != 0:
-            logging.error(f"Error processing {data_type}  {stderr.decode()}")
+            logging.error(f"Error processing {data_type}: {stderr.decode()}")
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
             return None
 
         logging.info(stdout.decode())
+        if args.verbose:
+            logging.debug(f"STDOUT: {stdout.decode()}")
+            logging.debug(f"STDERR: {stderr.decode()}")
         return output_file_path
 
     except ValueError as e:
@@ -70,7 +76,7 @@ def process_data(json_file_path, data_type, platform):
         logging.error(f"An unexpected error occurred: {str(e)}")
         return None
 
-def generate_knowledge_graph(json_file_path, data_type):
+def generate_knowledge_graph(json_file_path, data_type, args):
     """
     Generates a knowledge graph from the processed JSON file and returns the path to the generated CSV file.
 
@@ -99,9 +105,15 @@ def generate_knowledge_graph(json_file_path, data_type):
 
         if process.returncode != 0:
             logging.error(f"Error generating knowledge graph: {stderr.decode()}")
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
             return None
         else:
             logging.info(stdout.decode())
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
             return csv_file_path
 
     except FileNotFoundError:
@@ -129,19 +141,20 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Process the data
-    processed_file_path = process_data(args.json_file_path, args.data_type, args.platform)
+    processed_file_path = process_data(args.json_file_path, args.data_type, args.platform, args)
 
     if processed_file_path:
         logging.info(f"Processed data saved to: {processed_file_path}")
         if not args.skip_kg:
-            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type)
+            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
             if csv_file_path:
-                # Call threats_db_updater.py to embed the knowledge graph into the database
+                # Call db_updater_row.py to embed the knowledge graph into the database row by row
                 command = [
                     "python",
-                    "scripts/threats_db_updater.py",
+                    "scripts/db_updater_row.py",
                     csv_file_path,
-                    args.data_type
+                    args.data_type,
+                    args.platform
                 ]
                 logging.info(f"Executing: {' '.join(command)}")
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -149,8 +162,14 @@ def main():
 
                 if process.returncode != 0:
                     logging.error(f"Error updating database: {stderr.decode()}")
+                    if args.verbose:
+                        logging.debug(f"STDOUT: {stdout.decode()}")
+                        logging.debug(f"STDERR: {stderr.decode()}")
                 else:
                     logging.info(stdout.decode())
+                    if args.verbose:
+                        logging.debug(f"STDOUT: {stdout.decode()}")
+                        logging.debug(f"STDERR: {stderr.decode()}")
             else:
                 logging.error("Knowledge graph generation failed.")
     else:

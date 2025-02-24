@@ -17,7 +17,7 @@ def normalize_platform(platform):
     """
     return platform.lower() if platform else ""
 
-def process_mitre(json_file_path, platform):
+def process_mitre(json_file_path, platform, args):
     """
     Processes a MITRE ATT&CK JSON file, filtering techniques based on the specified platform.
 
@@ -119,7 +119,7 @@ def main():
 
     try:
         logging.info(f"Starting MITRE ATT&CK processing for {args.json_file_path}")
-        processed_data = process_mitre(args.json_file_path, args.platform)
+        processed_data = process_mitre(args.json_file_path, args.platform, args)
 
         if processed_data is not None:
             logging.info(f"Found relevant techniques for platform {args.platform}")

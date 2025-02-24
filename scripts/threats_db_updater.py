@@ -19,7 +19,7 @@ def update_threats_database(csv_file_path, data_type):
 
     Args:
         csv_file_path (str): The path to the knowledge graph CSV file.
-        data_type (str): The type of data ("CVE" or "MITRE").
+        data_type (str): The type of data (e.g., cve or mitre).
     """
     db_path = os.path.join(DB_DIR, DB_FILE)
 
@@ -64,7 +64,7 @@ def update_threats_database(csv_file_path, data_type):
         # Execute the llm command
         logging.info(f"Executing command: {' '.join(llm_command)}")
         subprocess.run(llm_command, check=True)
-        logging.info(f"Successfully updated {db_path} with {data_type} data for collection '{COLLECTION_NAME}'.")
+        logging.info(f"Successfully updated {db_path} with data for collection '{COLLECTION_NAME}'.")
 
     except subprocess.CalledProcessError as e:
         logging.error(f"Error executing llm command: {e}")
@@ -78,7 +78,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Create or update a threats database and embed knowledge graph data.")
     parser.add_argument("csv_file_path", help="Path to the knowledge graph CSV file")
-    parser.add_argument("data_type", help="Type of data (CVE or MITRE)")
+    parser.add_argument("data_type", help="Type of data (cve or mitre)")
     args = parser.parse_args()
 
     update_threats_database(args.csv_file_path, args.data_type)
