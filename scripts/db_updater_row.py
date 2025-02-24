@@ -95,6 +95,11 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                     logging.warning(f"Content already exists in collection: {platform}. Skipping.")
                     continue
 
+                # Check content length
+                if len(object_content) > MAX_CONTENT_LENGTH:
+                    logging.warning(f"Content length exceeds maximum limit for ID: {object_id}. Skipping.")
+                    continue
+
                 llm_command = [
                     "llm",
                     "embed",
@@ -108,20 +113,35 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                     object_content,
                     "--store"
                 ]
-                try:
-                    # Execute the llm command
-                    logging.info(f"Executing command: {' '.join(llm_command)}")
-                    subprocess.run(llm_command, text=True, check=True)
-                    success_count += 1
-                    row_end_time = time.time()
-                    logging.info(f"Successfully embedded row {row_count} (ID: {row_id}) in {row_end_time - row_start_time:.2f} seconds.")
 
-                except subprocess.CalledProcessError as e:
-                    logging.error(f"Error executing llm command for row {row_count} (ID: {row_id}): {e}")
-                    failure_count += 1
-                except Exception as e:
-                    logging.error(f"An unexpected error occurred for row {row_count} (ID: {row_id}): {e}")
-                    failure_count += 1
+                for attempt in range(MAX_RETRIES):
+                    try:
+                        # Execute the llm command with a timeout
+                        logging.info(f"Executing command (attempt {attempt + 1}/{MAX_RETRIES}): {' '.join(llm_command)}")
+                        result = subprocess.run(llm_command, text=True, capture_output=True, timeout=60)  # Timeout after 60 seconds
+                        if result.returncode == 0:
+                            success_count += 1
+                            row_end_time = time.time()
+                            logging.info(f"Successfully embedded row {row_count} (ID: {row_id}) in {row_end_time - row_start_time:.2f} seconds.")
+                            break  # Exit retry loop on success
+                        else:
+                            logging.error(f"llm command failed with return code {result.returncode} for row {row_count} (ID: {row_id}): {result.stderr}")
+                            failure_count += 1
+                    except subprocess.TimeoutExpired:
+                        logging.error(f"llm command timed out for row {row_count} (ID: {row_id}).")
+                        failure_count += 1
+                    except subprocess.CalledProcessError as e:
+                        logging.error(f"Error executing llm command for row {row_count} (ID: {row_id}): {e}")
+                        failure_count += 1
+                    except Exception as e:
+                        logging.error(f"An unexpected error occurred: {e}")
+                        failure_count += 1
+
+                    if attempt < MAX_RETRIES - 1:
+                        logging.info(f"Retrying in {RETRY_DELAY} seconds...")
+                        time.sleep(RETRY_DELAY)
+                    else:
+                        logging.error(f"Max retries reached for row {row_count} (ID: {row_id}). Skipping.")
 
     except FileNotFoundError:
         logging.error(f"CSV file not found: {csv_file_path}")
