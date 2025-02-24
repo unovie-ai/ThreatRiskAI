@@ -13,7 +13,12 @@ process_file() {
   local file="$1"
   local data_type="$2"
   local platform="$3"
-  local log_file="$directory/processing.log"
+  local logs_dir="./logs"
+
+  # Create the logs directory if it doesn't exist
+  mkdir -p "$logs_dir"
+
+  local log_file="$logs_dir/processing.log"
 
   log "Processing file: $file (Data Type: $data_type, Platform: $platform)"
 
