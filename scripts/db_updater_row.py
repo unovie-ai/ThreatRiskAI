@@ -87,6 +87,21 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                 ]
 
                 try:
+                    # Check if the embedding already exists
+                    check_command = [
+                        "llm",
+                        "search",
+                        platform,
+                        "--id",
+                        str(object_id),
+                        "-d",
+                        db_path
+                    ]
+                    result = subprocess.run(check_command, text=True, capture_output=True)
+                    if "No results found" not in result.stdout:
+                        logging.warning(f"Embedding already exists for ID: {object_id} in collection: {platform}. Skipping.")
+                        continue
+
                     # Execute the llm command
                     logging.info(f"Executing command: {' '.join(llm_command)}")
                     subprocess.run(llm_command, text=True, check=True)
