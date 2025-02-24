@@ -18,15 +18,13 @@ process_file() {
   log "Processing file: $file (Data Type: $data_type, Platform: $platform)"
 
   # Execute main.py with the specified arguments and redirect output to the log file
-  python main.py "$file" "$data_type" "$platform" --verbose 2>&1 | while read -r line; do
-    log "  $line" >> "$log_file"
-  done
+  python main.py "$file" "$data_type" "$platform" --verbose 2>&1 >> "$log_file" 2>&1
 
   # Check the exit code of the python script
   if [ $? -eq 0 ]; then
-    log "Successfully processed file: $file"
+    log "Successfully processed file: $file" >> "$log_file"
   else
-    log "Failed to process file: $file"
+    log "Failed to process file: $file" >> "$log_file"
   fi
 }
 
