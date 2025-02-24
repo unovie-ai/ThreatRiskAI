@@ -84,7 +84,7 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                 row_count += 1
                 row_start_time = time.time()
                 row_id = uuid.uuid4()  # Generate a random UUID
-                content = "\\n".join(row.values())  # Concatenate all values in the row
+                content = json.dumps(row)  # Convert row to JSON string
 
                 # Determine the llm command based on data type
                 object_id = row_id
