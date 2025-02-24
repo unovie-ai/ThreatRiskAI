@@ -5,6 +5,7 @@ import subprocess
 import sqlite3
 import csv
 import time
+import uuid
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -79,7 +80,7 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
             for row in reader:
                 row_count += 1
                 row_start_time = time.time()
-                row_id = row.get('id', f"row-{row_count}")  # Assuming 'id' is a column in the CSV
+                row_id = uuid.uuid4()  # Generate a random UUID
                 content = "\\n".join(row.values())  # Concatenate all values in the row
 
                 # Determine the llm command based on data type
