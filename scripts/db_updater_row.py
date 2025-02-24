@@ -59,6 +59,20 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
     success_count = 0
     failure_count = 0
 
+    # Fetch all existing IDs in the collection
+    existing_ids = set()
+    if collection_exists:
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT id FROM {platform}")
+            existing_ids = {row[0] for row in cursor.fetchall()}
+            conn.close()
+            logging.info(f"Found {len(existing_ids)} existing embeddings in collection: {platform}")
+        except sqlite3.Error as e:
+            logging.error(f"Error fetching existing IDs: {e}")
+            return
+
     try:
         with open(csv_file_path, 'r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -84,24 +98,12 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                     "-c",
                     object_content,
                     "--store"
-                ]
+                # Skip if the embedding already exists
+                if str(object_id) in existing_ids:
+                    logging.warning(f"Embedding already exists for ID: {object_id} in collection: {platform}. Skipping.")
+                    continue
 
                 try:
-                    # Check if the embedding already exists
-                    check_command = [
-                        "llm",
-                        "search",
-                        platform,
-                        "--id",
-                        str(object_id),
-                        "-d",
-                        db_path
-                    ]
-                    result = subprocess.run(check_command, text=True, capture_output=True)
-                    if "No results found" not in result.stdout:
-                        logging.warning(f"Embedding already exists for ID: {object_id} in collection: {platform}. Skipping.")
-                        continue
-
                     # Execute the llm command
                     logging.info(f"Executing command: {' '.join(llm_command)}")
                     subprocess.run(llm_command, text=True, check=True)
