@@ -11,6 +11,9 @@ import uuid
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants
+MAX_CONTENT_LENGTH = 1000  # Maximum content length for embedding
+MAX_RETRIES = 3  # Maximum number of retries for embedding
+RETRY_DELAY = 5  # Delay between retries in seconds
 DB_DIR = "db"
 EMBEDDING_MODEL = "jina-embeddings-v2-small-en"
 
