@@ -98,6 +98,7 @@ def update_database_row_by_row(csv_file_path, data_type, platform):
                     "-c",
                     object_content,
                     "--store"
+                ]
                 # Skip if the embedding already exists
                 if str(object_id) in existing_ids:
                     logging.warning(f"Embedding already exists for ID: {object_id} in collection: {platform}. Skipping.")
