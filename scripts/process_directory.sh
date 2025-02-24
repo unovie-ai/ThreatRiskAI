@@ -13,12 +13,13 @@ process_file() {
   local file="$1"
   local data_type="$2"
   local platform="$3"
+  local log_file="$directory/processing.log"
 
   log "Processing file: $file (Data Type: $data_type, Platform: $platform)"
 
-  # Execute main.py with the specified arguments
+  # Execute main.py with the specified arguments and redirect output to the log file
   python main.py "$file" "$data_type" "$platform" --verbose 2>&1 | while read -r line; do
-    log "  $line"
+    log "  $line" >> "$log_file"
   done
 
   # Check the exit code of the python script
@@ -51,6 +52,6 @@ find "$directory" -type f -name "*.json" | while read -r file; do
   process_file "$file" "$data_type" "$platform"
 done
 
-log "Finished processing all files."
+log "Finished processing all files." >> "$log_file"
 
 exit 0
