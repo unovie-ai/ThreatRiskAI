@@ -296,19 +296,79 @@ def create_mitre_knowledge_graph(json_file_path, args):
                   Description=attack_pattern.get("description", ""),
                   Detection=attack_pattern.get("x_mitre_detection", ""))
         
-        # Link techniques to their tactics
-        for tactic in tactic_names:
-            tactic_id = f"tactic_{tactic.lower().replace(' ', '_')}"
-            G.add_node(tactic_id, 
-                      Type="Tactic",
-                      Label=tactic,
-                      Framework="ATT&CK")
-            G.add_edge(mitre_id, tactic_id, Relationship="EMPLOYS")
+        # Add platform relationships
+        for platform in platforms:
+            platform_id = f"PLATFORM_{platform.upper().replace(' ', '_')}"
+            G.add_node(platform_id,
+                      Type="Platform",
+                      Label=platform,
+                      Category="Security Platform")
+            G.add_edge(mitre_id, platform_id, 
+                      Relationship="TARGETS",
+                      Confidence="High",
+                      Evidence=attack_pattern.get("x_mitre_platforms", []))
 
-        # Extract techniques and add them as nodes
-        techniques = [obj for obj in objects if obj.get("type") == "attack-pattern"]
-        for technique in techniques:
-            add_technique_and_subtechniques(G, mitre_id, technique, objects)
+        # Link techniques to their tactics with additional metadata
+        for tactic in tactic_names:
+            tactic_id = f"TACTIC_{tactic.upper().replace(' ', '_')}"
+            if not G.has_node(tactic_id):
+                G.add_node(tactic_id, 
+                          Type="Tactic",
+                          Label=tactic,
+                          Framework="ATT&CK",
+                          Description=f"MITRE ATT&CK {tactic} Tactic")
+            G.add_edge(mitre_id, tactic_id, 
+                      Relationship="EMPLOYS",
+                      Phase=attack_pattern.get("kill_chain_phases", [{}])[0].get("phase_name", ""),
+                      Technique_Type="Primary")
+
+        # Add mitigation relationships
+        for mitigation in attack_pattern.get("x_mitre_mitigation", []):
+            mitigation_id = f"MITIGATION_{uuid.uuid4().hex[:8]}"
+            G.add_node(mitigation_id,
+                      Type="Mitigation",
+                      Label=mitigation.get("name", "Unnamed Mitigation"),
+                      Description=mitigation.get("description", ""),
+                      Source=mitigation.get("source", "MITRE"))
+            G.add_edge(mitre_id, mitigation_id,
+                      Relationship="MITIGATED_BY",
+                      Effectiveness=mitigation.get("effectiveness", "Unknown"))
+
+        # Add reference URLs and external links
+        if "external_references" in attack_pattern:
+            for ref in attack_pattern["external_references"]:
+                if ref.get("url"):
+                    ref_id = f"REFERENCE_{uuid.uuid4().hex[:8]}"
+                    G.add_node(ref_id,
+                             Type="Reference",
+                             Label=ref.get("source_name", "Reference"),
+                             URL=ref["url"],
+                             Description=f"External reference for {technique_name}")
+                    G.add_edge(mitre_id, ref_id,
+                             Relationship="HAS_REFERENCE",
+                             Reference_Type=ref.get("source_name", "Generic"))
+
+        # Process relationships with other techniques
+        for rel in [obj for obj in objects if obj.get("source_ref") == mitre_id]:
+            target_tech = next((t for t in objects if t["id"] == rel["target_ref"]), None)
+            if target_tech and target_tech.get("type") == "attack-pattern":
+                rel_type = rel.get("relationship_type", "RELATED_TO").replace("-", "_").upper()
+                G.add_edge(mitre_id, target_tech["id"],
+                           Relationship=rel_type,
+                           Description=rel.get("description", ""),
+                           Source="MITRE Relationship")
+
+        # Add detection information
+        if "x_mitre_detection" in attack_pattern:
+            detection_id = f"DETECTION_{uuid.uuid4().hex[:8]}"
+            G.add_node(detection_id,
+                      Type="Detection",
+                      Label="Detection Logic",
+                      Description=attack_pattern["x_mitre_detection"],
+                      Confidence="Medium")
+            G.add_edge(mitre_id, detection_id,
+                      Relationship="HAS_DETECTION",
+                      Data_Sources=attack_pattern.get("x_mitre_data_sources", []))
 
     return G
 
