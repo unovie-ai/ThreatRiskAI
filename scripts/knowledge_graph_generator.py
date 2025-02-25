@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import logging
 import os
@@ -230,13 +231,26 @@ def extract_cve_relationships(graph, data):
     for description in descriptions:
         description_text = description.get("value", "No Description")
         if description_text and description_text.strip():
-            description_node_id = f"DESCRIPTION_{hash(description_text)}"  # Use description text as node ID
-            if not graph.has_node(description_node_id):
-                graph.add_node(description_node_id, Type="Description", Label="Description", Description=description_text)
+            # Create consistent description node ID using SHA256 hash
+            description_hash = hashlib.sha256(description_text.encode()).hexdigest()[:16]
+            description_node_id = f"DESC_{description_hash}"
             
-            # Generate a unique edge ID
-            edge_id = f"CVE_{cve_id}_DESCRIBES_{description_node_id}"
-            graph.add_edge(cve_id, description_node_id, id=edge_id, relation="describes", Type="DESCRIBES")
+            # Add/update description node with full text
+            if not graph.has_node(description_node_id):
+                graph.add_node(description_node_id, 
+                             Type="Description",
+                             Label=description_text[:50] + "...",  # Truncated label
+                             FullText=description_text,  # Store full description
+                             Description=f"Description of CVE {cve_id}")
+            
+            # Create relationship edge with context
+            edge_id = f"CVE_{cve_id}_DESCRIBES_{description_hash}"
+            graph.add_edge(cve_id, description_node_id, 
+                          id=edge_id, 
+                          relation="describes", 
+                          Type="DESCRIBES",
+                          Context="CVE Description",
+                          Source="NVD")
         else:
             logging.warning(f"Empty description for CVE {cve_id}. Skipping description node creation.")
 
@@ -441,11 +455,18 @@ def save_knowledge_graph(graph, base_filename):
         # Write header
         f.write("ID,Text\n")
 
-        # Write nodes
+        # Write nodes with special handling for descriptions
         for node_id, attributes in graph.nodes(data=True):
-            node_type = attributes.get('Type', 'unknown')
-            description = attributes.get('Description', 'No description')
-            text = f"{node_type}: {description}"
+            if attributes.get('Type') == 'Description':
+                # For descriptions, use the full text stored in FullText attribute
+                text = attributes.get('FullText', attributes.get('Description', 'No description'))
+            else:
+                node_type = attributes.get('Type', 'unknown')
+                description = attributes.get('Description', 'No description')
+                text = f"{node_type}: {description}"
+            
+            # Escape quotes and newlines for CSV
+            text = text.replace('"', '""').replace('\n', ' ')
             f.write(f'"{node_id}","{text}"\n')
 
         # Write edges
