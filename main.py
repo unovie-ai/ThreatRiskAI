@@ -148,10 +148,10 @@ def main():
         if not args.skip_kg:
             csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
             if csv_file_path:
-                # Call db_updater_row.py to embed the knowledge graph into the database row by row
+                # Call db_updater.py to embed the knowledge graph into the database
                 command = [
                     "python",
-                    "scripts/db_updater_row.py",
+                    "scripts/db_updater.py",
                     csv_file_path,
                     args.data_type,
                     args.platform
