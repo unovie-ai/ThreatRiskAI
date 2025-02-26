@@ -39,7 +39,8 @@ def update_database(data_type, platform, kg_directory):
         "llm", "embed-multi", platform,
         "-m", embedding_model,
         "-d", db_path,
-        "--files", f"{kg_directory}/**/*.csv",
+        "--files", kg_directory,
+        "'/**/*.csv'",
         "--store"
     ]
 
