@@ -157,7 +157,7 @@ def main():
             "scripts/db_updater.py",
             args.data_type,
             args.platform,
-            args.kg_directory
+            args.kg_directory.rstrip('/')
         ]
         logging.info(f"Executing: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
