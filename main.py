@@ -149,11 +149,16 @@ def main():
             parser.error("--embed requires data_type and platform to be specified")
             sys.exit(1)
 
-        csv_file_path = os.path.join(args.kg_directory, f"{args.data_type.lower()}.csv")
+        # Find the CSV file in the kg_directory
+        csv_file_path = None
+        for filename in os.listdir(args.kg_directory):
+            if filename.endswith(".csv") and args.data_type.lower() in filename.lower():
+                csv_file_path = os.path.join(args.kg_directory, filename)
+                break
 
-        if not os.path.exists(csv_file_path):
-             logging.error(f"Knowledge graph CSV file not found: {csv_file_path}")
-             sys.exit(1)
+        if not csv_file_path:
+            logging.error(f"No knowledge graph CSV file found for {args.data_type} in {args.kg_directory}")
+            sys.exit(1)
 
         # Call db_updater.py to embed the knowledge graph into the database
         command = [
