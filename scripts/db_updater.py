@@ -40,7 +40,7 @@ def update_database(csv_file_path, data_type, platform, kg_directory):
         "llm", "embed-multi", platform,
         "-m", embedding_model,
         "-d", db_path,
-        "--files", os.path.join("..", kg_directory, "**/*.csv"),
+        "--files",  f"{kg_directory}/**/*.csv",
         "--store"
     ]
 
