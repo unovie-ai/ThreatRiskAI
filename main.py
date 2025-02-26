@@ -4,6 +4,7 @@ import os
 import subprocess
 import json
 import logging
+import sys # Import sys for exit codes
 
 # Constants for directory paths
 OUTPUT_DIR = "output"
@@ -102,9 +103,10 @@ def generate_knowledge_graph(json_file_path, data_type, args):
         logging.info(f"Executing: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
+        process.wait() # Wait for the process to finish and get return code
 
-        if process.returncode != 0:
-            logging.error(f"Error generating knowledge graph: {stderr.decode()}")
+        if process.returncode != 0: # Check return code instead of stdout/stderr
+            logging.error(f"Knowledge graph generator failed with exit code: {process.returncode}")
             if args.verbose:
                 logging.debug(f"STDOUT: {stdout.decode()}")
                 logging.debug(f"STDERR: {stderr.decode()}")
@@ -172,8 +174,13 @@ def main():
                         logging.debug(f"STDERR: {stderr.decode()}")
             else:
                 logging.error("Knowledge graph generation failed.")
+                sys.exit(1) # Exit if KG generation fails
+        else:
+            logging.error("Data processing failed.")
+            sys.exit(1) # Exit if data processing fails
     else:
         logging.error("Data processing failed.")
+        sys.exit(1) # Exit if data processing fails
 
 
 if __name__ == "__main__":

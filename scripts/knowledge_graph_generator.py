@@ -8,6 +8,7 @@ import re
 import networkx as nx
 import matplotlib.pyplot as plt
 from typing import Optional, List
+import sys  # Import sys for exit codes
 
 # Validation helpers
 def validate_mitre_id(mitre_id: str) -> bool:
@@ -235,20 +236,20 @@ def extract_cve_relationships(graph, data):
             # Create consistent description node ID using SHA256 hash
             description_hash = hashlib.sha256(description_text.encode()).hexdigest()[:16]
             description_node_id = f"DESC_{description_hash}"
-            
+
             # Add/update description node with full text
             if not graph.has_node(description_node_id):
-                graph.add_node(description_node_id, 
+                graph.add_node(description_node_id,
                              Type="Description",
                              Label=description_text[:50] + "...",  # Truncated label
                              FullText=description_text,  # Store full description
                              Description=f"Description of CVE {cve_id}")
-            
+
             # Create relationship edge with context
             edge_id = f"CVE_{cve_id}_DESCRIBES_{description_hash}"
-            graph.add_edge(cve_id, description_node_id, 
-                          id=edge_id, 
-                          relation="describes", 
+            graph.add_edge(cve_id, description_node_id,
+                          id=edge_id,
+                          relation="describes",
                           Type="DESCRIBES",
                           Context="CVE Description",
                           Source="NVD")
@@ -295,10 +296,10 @@ def create_mitre_knowledge_graph(json_file_path, args):
         if not validate_mitre_id(mitre_id) or not attack_pattern.get("name"):
             logging.warning(f"Skipping invalid MITRE entry: {mitre_id}")
             continue
-            
+
         tactic_names = [t.capitalize() for t in attack_pattern.get("x_mitre_tactic", [])]
         platforms = [normalize_platform(p) for p in attack_pattern.get("x_mitre_platforms", [])]
-        
+
         # Add MITRE technique node
         technique_name = attack_pattern["name"]
         G.add_node(mitre_id,
@@ -310,7 +311,7 @@ def create_mitre_knowledge_graph(json_file_path, args):
                   Source="MITRE ATT&CK",
                   Description=attack_pattern.get("description", ""),
                   Detection=attack_pattern.get("x_mitre_detection", ""))
-        
+
         # Add platform relationships
         for platform in platforms:
             platform_id = f"PLATFORM_{platform.upper().replace(' ', '_')}"
@@ -318,7 +319,7 @@ def create_mitre_knowledge_graph(json_file_path, args):
                       Type="Platform",
                       Label=platform,
                       Category="Security Platform")
-            G.add_edge(mitre_id, platform_id, 
+            G.add_edge(mitre_id, platform_id,
                       Relationship="TARGETS",
                       Confidence="High",
                       Evidence=attack_pattern.get("x_mitre_platforms", []))
@@ -327,12 +328,12 @@ def create_mitre_knowledge_graph(json_file_path, args):
         for tactic in tactic_names:
             tactic_id = f"TACTIC_{tactic.upper().replace(' ', '_')}"
             if not G.has_node(tactic_id):
-                G.add_node(tactic_id, 
+                G.add_node(tactic_id,
                           Type="Tactic",
                           Label=tactic,
                           Framework="ATT&CK",
                           Description=f"MITRE ATT&CK {tactic} Tactic")
-            G.add_edge(mitre_id, tactic_id, 
+            G.add_edge(mitre_id, tactic_id,
                       Relationship="EMPLOYS",
                       Phase=attack_pattern.get("kill_chain_phases", [{}])[0].get("phase_name", ""),
                       Technique_Type="Primary")
@@ -465,7 +466,7 @@ def save_knowledge_graph(graph, base_filename):
                 node_type = attributes.get('Type', 'unknown')
                 description = attributes.get('Description', 'No description')
                 text = f"{node_type}: {description}"
-            
+
             # Escape quotes and newlines for CSV
             text = text.replace('"', '""').replace('\n', ' ')
             f.write(f'"{node_id}","{text}"\n')
@@ -514,11 +515,11 @@ def visualize_knowledge_graph(graph, base_filename):
         else:  # CONTAINS or other
             edge_colors.append('#0000ff')  # Blue
 
-    nx.draw(graph, pos, with_labels=True, 
-            node_color=node_colors, 
+    nx.draw(graph, pos, with_labels=True,
+            node_color=node_colors,
             edge_color=edge_colors,
-            node_size=[len(str(n))*200 for n in graph.nodes()], 
-            font_size=8, 
+            node_size=[len(str(n))*200 for n in graph.nodes()],
+            font_size=8,
             font_weight="bold",
             arrows=True,
             arrowsize=20,
@@ -633,7 +634,7 @@ def generate_cytoscape_html(graph, output_path):
                     gravity: 50,
                     randomize: true,
                     animate: false,
-                    
+
                 }}
             }});
         </script>
@@ -660,7 +661,7 @@ def main():
     # Validate data_type
     if args.data_type not in SUPPORTED_DATA_TYPES:
         logging.error(f"Invalid data type: {args.data_type}. Supported types are: {SUPPORTED_DATA_TYPES}")
-        return
+        sys.exit(1)  # Exit with error code
 
     # Extract filename from path
     file_name = os.path.splitext(os.path.basename(args.json_file_path))[0]
@@ -669,26 +670,32 @@ def main():
     os.makedirs(KNOWLEDGE_GRAPHS_DIR, exist_ok=True)
     os.makedirs(VISUALIZATION_DIR, exist_ok=True)
 
-    # Create the knowledge graph
-    graph = create_knowledge_graph(args.json_file_path, args.data_type, args)
-    if graph is None:
-        logging.error("Failed to create knowledge graph.")
-        return
+    try: # Add try-except block to catch potential errors
+        # Create the knowledge graph
+        graph = create_knowledge_graph(args.json_file_path, args.data_type, args)
+        if graph is None:
+            logging.error("Failed to create knowledge graph.")
+            sys.exit(1) # Exit with error code
 
-    num_nodes = graph.number_of_nodes()
-    num_edges = graph.number_of_edges()
+        num_nodes = graph.number_of_nodes()
+        num_edges = graph.number_of_edges()
 
-    logging.info(f"Knowledge graph contains {num_nodes} nodes and {num_edges} edges.")
+        logging.info(f"Knowledge graph contains {num_nodes} nodes and {num_edges} edges.")
 
-    # Save the knowledge graph
-    base_filename = os.path.join(KNOWLEDGE_GRAPHS_DIR, file_name)
-    save_knowledge_graph(graph, base_filename)
+        # Save the knowledge graph
+        base_filename = os.path.join(KNOWLEDGE_GRAPHS_DIR, file_name)
+        save_knowledge_graph(graph, base_filename)
 
-    # Visualize the knowledge graph
-    visualization_filename = os.path.join(VISUALIZATION_DIR, file_name)
-    visualize_knowledge_graph(graph, visualization_filename)
+        # Visualize the knowledge graph
+        visualization_filename = os.path.join(VISUALIZATION_DIR, file_name)
+        visualize_knowledge_graph(graph, visualization_filename)
 
-    print("Knowledge graph generation and visualization completed.")
+        print("Knowledge graph generation and visualization completed.")
+        sys.exit(0) # Exit with success code
+
+    except Exception as e: # Catch any exceptions during KG generation
+        logging.error(f"An error occurred during knowledge graph generation: {e}")
+        sys.exit(1) # Exit with error code
 
 
 if __name__ == "__main__":
