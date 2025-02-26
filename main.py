@@ -4,7 +4,7 @@ import os
 import subprocess
 import json
 import logging
-import sys # Import sys for exit codes
+import sys  # Import sys for exit codes
 
 # Constants for directory paths
 OUTPUT_DIR = "output"
@@ -136,6 +136,8 @@ def main():
     parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
     parser.add_argument("--skip-kg", action="store_true", help="Skip knowledge graph generation")
+    parser.add_argument("--embed", action="store_true", help="Embed the knowledge graph into the database")
+    parser.add_argument("--kg-directory", default="knowledge_graphs", help="Directory containing the knowledge graph CSV files")
     args = parser.parse_args()
 
     # Set logging level based on verbosity
@@ -147,40 +149,42 @@ def main():
 
     if processed_file_path:
         logging.info(f"Processed data saved to: {processed_file_path}")
-        if not args.skip_kg:
-            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
-            if csv_file_path:
-                # Call db_updater.py to embed the knowledge graph into the database
-                command = [
-                    "python",
-                    "scripts/db_updater.py",
-                    csv_file_path,
-                    args.data_type,
-                    args.platform
-                ]
-                logging.info(f"Executing: {' '.join(command)}")
-                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
 
-                if process.returncode != 0:
-                    logging.error(f"Error updating database: {stderr.decode()}")
-                    if args.verbose:
-                        logging.debug(f"STDOUT: {stdout.decode()}")
-                        logging.debug(f"STDERR: {stderr.decode()}")
-                else:
-                    logging.info(stdout.decode())
-                    if args.verbose:
-                        logging.debug(f"STDOUT: {stdout.decode()}")
-                        logging.debug(f"STDERR: {stderr.decode()}")
+        csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
+        if not csv_file_path:
+            logging.error("Knowledge graph generation failed.")
+            sys.exit(1)  # Exit if KG generation fails
+
+        if args.embed:
+            # Call db_updater.py to embed the knowledge graph into the database
+            command = [
+                "python",
+                "scripts/db_updater.py",
+                csv_file_path,
+                args.data_type,
+                args.platform,
+                args.kg_directory
+            ]
+            logging.info(f"Executing: {' '.join(command)}")
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0:
+                logging.error(f"Error updating database: {stderr.decode()}")
+                if args.verbose:
+                    logging.debug(f"STDOUT: {stdout.decode()}")
+                    logging.debug(f"STDERR: {stderr.decode()}")
+                sys.exit(1)
             else:
-                logging.error("Knowledge graph generation failed.")
-                sys.exit(1) # Exit if KG generation fails
+                logging.info(stdout.decode())
+                if args.verbose:
+                    logging.debug(f"STDOUT: {stdout.decode()}")
+                    logging.debug(f"STDERR: {stderr.decode()}")
         else:
-            logging.error("Data processing failed.")
-            sys.exit(1) # Exit if data processing fails
+            logging.info("Skipping embedding due to --embed flag not set.")
     else:
         logging.error("Data processing failed.")
-        sys.exit(1) # Exit if data processing fails
+        sys.exit(1)  # Exit if data processing fails
 
 
 if __name__ == "__main__":
