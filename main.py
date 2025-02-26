@@ -151,10 +151,6 @@ def main():
 
         csv_file_path = os.path.join(args.kg_directory, f"{args.data_type.lower()}.csv")
 
-        if not os.path.exists(csv_file_path):
-             logging.error(f"Knowledge graph CSV file not found: {csv_file_path}")
-             sys.exit(1)
-
         # Call db_updater.py to embed the knowledge graph into the database
         command = [
             "python",
