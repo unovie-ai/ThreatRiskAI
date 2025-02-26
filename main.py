@@ -131,9 +131,9 @@ def main():
     Main function to orchestrate the data processing pipeline.
     """
     parser = argparse.ArgumentParser(description="Process threat data (MITRE or CVE) based on the specified platform.")
-    parser.add_argument("json_file_path", help="Path to the input JSON file")
-    parser.add_argument("data_type", help="Type of data (MITRE or CVE)")
-    parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)")
+    parser.add_argument("data_type", help="Type of data (MITRE or CVE)", nargs='?')
+    parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)", nargs='?')
+    parser.add_argument("json_file_path", help="Path to the input JSON file", nargs='?')
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
     parser.add_argument("--skip-kg", action="store_true", help="Skip knowledge graph generation")
     parser.add_argument("--embed", action="store_true", help="Embed the knowledge graph into the database")
@@ -144,47 +144,60 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Process the data
-    processed_file_path = process_data(args.json_file_path, args.data_type, args.platform, args)
+    if args.embed:
+        if not (args.data_type and args.platform):
+            parser.error("--embed requires data_type and platform to be specified")
+            sys.exit(1)
 
-    if processed_file_path:
-        logging.info(f"Processed data saved to: {processed_file_path}")
+        csv_file_path = os.path.join(args.kg_directory, f"{args.data_type.lower()}.csv")
 
-        csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
-        if not csv_file_path:
-            logging.error("Knowledge graph generation failed.")
-            sys.exit(1)  # Exit if KG generation fails
+        if not os.path.exists(csv_file_path):
+             logging.error(f"Knowledge graph CSV file not found: {csv_file_path}")
+             sys.exit(1)
 
-        if args.embed:
-            # Call db_updater.py to embed the knowledge graph into the database
-            command = [
-                "python",
-                "scripts/db_updater.py",
-                csv_file_path,
-                args.data_type,
-                args.platform,
-                args.kg_directory
-            ]
-            logging.info(f"Executing: {' '.join(command)}")
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
+        # Call db_updater.py to embed the knowledge graph into the database
+        command = [
+            "python",
+            "scripts/db_updater.py",
+            csv_file_path,
+            args.data_type,
+            args.platform,
+            args.kg_directory
+        ]
+        logging.info(f"Executing: {' '.join(command)}")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
 
-            if process.returncode != 0:
-                logging.error(f"Error updating database: {stderr.decode()}")
-                if args.verbose:
-                    logging.debug(f"STDOUT: {stdout.decode()}")
-                    logging.debug(f"STDERR: {stderr.decode()}")
-                sys.exit(1)
-            else:
-                logging.info(stdout.decode())
-                if args.verbose:
-                    logging.debug(f"STDOUT: {stdout.decode()}")
-                    logging.debug(f"STDERR: {stderr.decode()}")
+        if process.returncode != 0:
+            logging.error(f"Error updating database: {stderr.decode()}")
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
+            sys.exit(1)
         else:
-            logging.info("Skipping embedding due to --embed flag not set.")
+            logging.info(stdout.decode())
+            if args.verbose:
+                logging.debug(f"STDOUT: {stdout.decode()}")
+                logging.debug(f"STDERR: {stderr.decode()}")
+
     else:
-        logging.error("Data processing failed.")
-        sys.exit(1)  # Exit if data processing fails
+        if not (args.json_file_path and args.data_type and args.platform):
+            parser.error("json_file_path, data_type and platform are required unless --embed is used")
+            sys.exit(1)
+
+        # Process the data
+        processed_file_path = process_data(args.json_file_path, args.data_type, args.platform, args)
+
+        if processed_file_path:
+            logging.info(f"Processed data saved to: {processed_file_path}")
+
+            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
+            if not csv_file_path:
+                logging.error("Knowledge graph generation failed.")
+                sys.exit(1)  # Exit if KG generation fails
+        else:
+            logging.error("Data processing failed.")
+            sys.exit(1)  # Exit if data processing fails
 
 
 if __name__ == "__main__":
