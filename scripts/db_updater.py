@@ -11,12 +11,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Constants
 DB_DIR = "db"
 
-def update_database(csv_file_path, data_type, platform, kg_directory):
+def update_database(data_type, platform, kg_directory):
     """
     Creates or updates a CVE or MITRE database and embeds the knowledge graph data.
 
     Args:
-        csv_file_path (str): The path to the knowledge graph CSV file.
         data_type (str): The type of data ("CVE" or "MITRE").
         platform (str): The platform (e.g., "containers", "Windows", "Linux"), used as collection name.
         kg_directory (str): The directory containing the knowledge graph CSV files.
@@ -84,13 +83,12 @@ def main():
     Main function to parse arguments and call the database update function.
     """
     parser = argparse.ArgumentParser(description="Create or update a CVE or MITRE database and embed knowledge graph data.")
-    parser.add_argument("csv_file_path", help="Path to the knowledge graph CSV file")
     parser.add_argument("data_type", help="Type of data (CVE or MITRE)")
     parser.add_argument("platform", help="Platform (e.g., containers, Windows, Linux)")
     parser.add_argument("kg_directory", help="Directory containing the knowledge graph CSV files")
     args = parser.parse_args()
 
-    update_database(args.csv_file_path, args.data_type, args.platform, args.kg_directory)
+    update_database(args.data_type, args.platform, args.kg_directory)
 
 
 if __name__ == "__main__":

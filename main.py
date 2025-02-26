@@ -155,7 +155,6 @@ def main():
         command = [
             "python",
             "scripts/db_updater.py",
-            csv_file_path,
             args.data_type,
             args.platform,
             args.kg_directory
