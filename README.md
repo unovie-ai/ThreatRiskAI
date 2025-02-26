@@ -20,4 +20,5 @@ Example .env file:
 LLM_MODEL=gemini-2.0-flash-exp
 NUM_RESULTS=10
 DATABASES=db/threats.db:threats
+EMBEDDING_MODEL=jina-embeddings-v2-small-en
 ```
