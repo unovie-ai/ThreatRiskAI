@@ -181,7 +181,7 @@ def main():
             sys.exit(1)
 
         # Process the data
-        processed_file_path = process_data(args.json_file_path, args.data_type, args.platform, args)
+        processed_file_path = process_data(args.json_file_path, args.data_type.upper(), args.platform, args)
 
         if processed_file_path:
             logging.info(f"Processed data saved to: {processed_file_path}")
