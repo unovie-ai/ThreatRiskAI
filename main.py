@@ -13,6 +13,7 @@ OUTPUT_DIR = "output"
 DEFAULT_LOG_LEVEL = logging.INFO
 
 def process_data(json_file_path, data_type, platform, args):
+    logging.debug(f"process_data called with: json_file_path={json_file_path}, data_type={data_type}, platform={platform}, args={args}")
     """
     Processes data based on the specified data type (MITRE or CVE).
 
@@ -78,6 +79,7 @@ def process_data(json_file_path, data_type, platform, args):
         return None
 
 def generate_knowledge_graph(json_file_path, data_type, args):
+    logging.debug(f"generate_knowledge_graph called with: json_file_path={json_file_path}, data_type={data_type}, args={args}")
     """
     Generates a knowledge graph from the processed JSON file and returns the path to the generated CSV file.
 
