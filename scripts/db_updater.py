@@ -40,7 +40,7 @@ def update_database(data_type, platform, kg_directory):
         "-m", embedding_model,
         "-d", db_path,
         "--files", kg_directory.rstrip('/'),
-        "'/**/*.csv'",
+        "**/*.csv",
         "--store"
     ]
 
