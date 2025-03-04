@@ -111,7 +111,7 @@ def process_mitre(json_file_path, platform, args):
 
         # Create a new JSON structure for the technique and its related objects
         combined_objects = [technique] + related_objects
-        threat_data[str, Any] = {
+        threat_ Dict[str, Any] = {
             "objects": combined_objects,
             "type": mitre_data.get("type"),
             "id": mitre_data.get("id"),
