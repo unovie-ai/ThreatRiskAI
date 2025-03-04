@@ -129,9 +129,12 @@ def process_mitre(json_file_path, platform, args):
 
     if not filtered_techniques:
         logging.warning(f"No relevant techniques found for platform {platform}")
+        print(json.dumps([]))
         return []
 
-    return [os.path.join(args.output_dir, f"{technique.get('id')}.json") for technique in filtered_techniques]
+    file_paths = [os.path.join(args.output_dir, f"{technique.get('id')}.json") for technique in filtered_techniques]
+    print(json.dumps(file_paths))
+    return file_paths
 
 
 def main():
@@ -156,7 +159,9 @@ def main():
 
     try:
         logging.info(f"Starting MITRE ATT&CK processing for {args.json_file_path}")
-        process_mitre(args.json_file_path, args.platform, args)
+        file_paths = process_mitre(args.json_file_path, args.platform, args)
+        # Print the list of file paths to standard output
+        # print(json.dumps(file_paths)) # Moved to process_mitre function
 
     except Exception as e:
         logging.error(f"Failed to process MITRE ATT&CK file: {str(e)}")
