@@ -71,16 +71,18 @@ def process_data(json_file_path, data_type, platform, args):
         # For MITRE, process_mitre returns a list of file paths
         # For CVE, process_cve returns a single file path (or None)
         if data_type.upper() == "MITRE":
+            raw_output = stdout.decode()
+            logging.debug(f"Raw output from MITRE processor: {raw_output}")
             try:
                 # Attempt to parse the stdout as a JSON list of file paths
-                file_paths = json.loads(stdout.decode())
+                file_paths = json.loads(raw_output)
                 if isinstance(file_paths, list):
                     return file_paths
                 else:
                     logging.error(f"Unexpected output from MITRE processor: {file_paths}")
                     return None
             except json.JSONDecodeError:
-                logging.error(f"Could not decode JSON from MITRE processor's output: {stdout.decode()}")
+                logging.error(f"Could not decode JSON from MITRE processor's output: {raw_output}")
                 return None
         else:
             # For CVE, return the single output file path
