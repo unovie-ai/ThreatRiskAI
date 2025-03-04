@@ -111,7 +111,7 @@ def process_mitre(json_file_path, platform, args):
 
         # Create a new JSON structure for the technique and its related objects
         combined_objects = [technique] + related_objects
-        threat_data = {
+        threat_ Dict[str, Any] = {
             "objects": combined_objects,
             "type": mitre_data.get("type"),
             "id": mitre_data.get("id"),
@@ -119,7 +119,7 @@ def process_mitre(json_file_path, platform, args):
         }
 
         # Save the data to a JSON file named after the technique's ID
-        output_file_path = os.path.join(output_dir, f"{technique_id}.json")
+        output_file_path = os.path.join(args.output_dir, f"{technique_id}.json")
         try:
             with open(output_file_path, "w") as outfile:
                 json.dump(threat_data, outfile, indent=4)
@@ -156,16 +156,7 @@ def main():
 
     try:
         logging.info(f"Starting MITRE ATT&CK processing for {args.json_file_path}")
-        processed_data = process_mitre(args.json_file_path, args.platform, args)
-
-        if processed_data is not None:
-            logging.info(f"Found relevant techniques for platform {args.platform}")
-            with open(output_file_path, "w") as outfile:
-                json.dump(processed_data, outfile, indent=4)
-            print(f"Processed data saved to: {output_file_path}")
-        else:
-            logging.warning(f"No relevant techniques found in {args.json_file_path} for platform {args.platform}")
-            print("No relevant techniques found.")
+        process_mitre(args.json_file_path, args.platform, args)
 
     except Exception as e:
         logging.error(f"Failed to process MITRE ATT&CK file: {str(e)}")
