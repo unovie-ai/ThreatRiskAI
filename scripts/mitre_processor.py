@@ -2,7 +2,7 @@ import argparse
 import json
 import logging
 import os
-from typing import List
+from typing import List, Dict, Any
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -48,7 +48,7 @@ def process_mitre(json_file_path, platform, args):
         """
         return PLATFORM_MAPPING.get(target_platform, [target_platform])
 
-    def platform_check(mitre_object: dict, target_platform: str) -> bool:
+    def platform_check(mitre_object: Dict[str, Any], target_platform: str) -> bool:
         """
         Checks if a MITRE ATT&CK object is relevant to the specified platform.
 
@@ -76,8 +76,8 @@ def process_mitre(json_file_path, platform, args):
         return False
 
     # Filter MITRE ATT&CK objects based on the platform
-    filtered_techniques = []
-    all_objects = mitre_data.get("objects", [])
+    filtered_techniques: List[Dict[str, Any]] = []
+    all_objects: List[Dict[str, Any]] = mitre_data.get("objects", [])
     for mitre_object in all_objects:
         if mitre_object.get("type") == "attack-pattern":
             if platform_check(mitre_object, platform):
@@ -92,33 +92,46 @@ def process_mitre(json_file_path, platform, args):
         technique.get("id") for technique in filtered_techniques
     }
 
-    # Identify related objects
-    related_objects = []
-    for mitre_object in all_objects:
-        # Check if the object references any of the filtered technique IDs
-        if any(
-            ref in filtered_technique_ids
-            for key, ref in mitre_object.items()
-            if key.endswith("_ref") and isinstance(ref, str)
-        ):
-            related_objects.append(mitre_object)
+    # Create individual JSON files for each filtered technique and its related objects
+    for technique in filtered_techniques:
+        technique_id = technique.get("id")
+        if not technique_id:
+            logging.warning(f"Technique has no ID: {technique.get('name')}")
+            continue
 
-    # Combine filtered techniques and related objects
-    combined_objects = filtered_techniques + related_objects
+        # Identify related objects for the current technique
+        related_objects: List[Dict[str, Any]] = []
+        for mitre_object in all_objects:
+            if any(
+                technique_id == ref
+                for key, ref in mitre_object.items()
+                if key.endswith("_ref") and isinstance(ref, str)
+            ):
+                related_objects.append(mitre_object)
 
-    # Create a new MITRE ATT&CK JSON structure with the combined objects
-    filtered_data = {
-        "objects": combined_objects,
-        "type": mitre_data.get("type"),
-        "id": mitre_data.get("id"),
-        "spec_version": mitre_data.get("spec_version"),
-    }
+        # Create a new JSON structure for the technique and its related objects
+        combined_objects = [technique] + related_objects
+        threat_data = {
+            "objects": combined_objects,
+            "type": mitre_data.get("type"),
+            "id": mitre_data.get("id"),
+            "spec_version": mitre_data.get("spec_version"),
+        }
+
+        # Save the data to a JSON file named after the technique's ID
+        output_file_path = os.path.join(output_dir, f"{technique_id}.json")
+        try:
+            with open(output_file_path, "w") as outfile:
+                json.dump(threat_data, outfile, indent=4)
+            logging.info(f"Threat data saved to: {output_file_path}")
+        except Exception as e:
+            logging.error(f"Failed to save threat data to {output_file_path}: {str(e)}")
 
     if not filtered_techniques:
         logging.warning(f"No relevant techniques found for platform {platform}")
         return None
 
-    return filtered_data
+    return None
 
 
 def main():
