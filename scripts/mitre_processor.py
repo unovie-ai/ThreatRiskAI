@@ -129,9 +129,9 @@ def process_mitre(json_file_path, platform, args):
 
     if not filtered_techniques:
         logging.warning(f"No relevant techniques found for platform {platform}")
-        return None
+        return []
 
-    return None
+    return [os.path.join(args.output_dir, f"{technique.get('id')}.json") for technique in filtered_techniques]
 
 
 def main():

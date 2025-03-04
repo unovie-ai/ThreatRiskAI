@@ -44,7 +44,7 @@ def process_data(json_file_path, data_type, platform, args):
 
         # Construct the command to execute the script
         command = [
-            "python",
+            sys.executable,
             script_path,
             json_file_path,
             platform,
@@ -62,11 +62,29 @@ def process_data(json_file_path, data_type, platform, args):
                 logging.debug(f"STDERR: {stderr.decode()}")
             return None
 
+        # Log the standard output
         logging.info(stdout.decode())
         if args.verbose:
             logging.debug(f"STDOUT: {stdout.decode()}")
             logging.debug(f"STDERR: {stderr.decode()}")
-        return output_file_path
+
+        # For MITRE, process_mitre returns a list of file paths
+        # For CVE, process_cve returns a single file path (or None)
+        if data_type.upper() == "MITRE":
+            try:
+                # Attempt to parse the stdout as a JSON list of file paths
+                file_paths = json.loads(stdout.decode())
+                if isinstance(file_paths, list):
+                    return file_paths
+                else:
+                    logging.error(f"Unexpected output from MITRE processor: {file_paths}")
+                    return None
+            except json.JSONDecodeError:
+                logging.error(f"Could not decode JSON from MITRE processor's output: {stdout.decode()}")
+                return None
+        else:
+            # For CVE, return the single output file path
+            return output_file_path
 
     except ValueError as e:
         logging.error(str(e))
@@ -78,7 +96,7 @@ def process_data(json_file_path, data_type, platform, args):
         logging.error(f"An unexpected error occurred: {str(e)}")
         return None
 
-def generate_knowledge_graph(json_file_path, data_type, args):
+def generate_knowledge_graph(json_file_path: str, data_type: str, args: argparse.Namespace) -> str | None:
     logging.debug(f"generate_knowledge_graph called with: json_file_path={json_file_path}, data_type={data_type}, args={args}")
     """
     Generates a knowledge graph from the processed JSON file and returns the path to the generated CSV file.
@@ -127,6 +145,20 @@ def generate_knowledge_graph(json_file_path, data_type, args):
         logging.error(f"An unexpected error occurred: {str(e)}")
         return None
 
+def process_mitre_data(processed_files: list[str], data_type: str, args: argparse.Namespace) -> None:
+    """
+    Generates knowledge graphs for each processed MITRE file.
+
+    Args:
+        processed_files (list[str]): List of paths to the processed JSON files.
+        data_type (str): Type of data (MITRE or CVE).
+        args (argparse.Namespace): Command-line arguments.
+    """
+    for processed_file_path in processed_files:
+        csv_file_path = generate_knowledge_graph(processed_file_path, data_type, args)
+        if not csv_file_path:
+            logging.error(f"Knowledge graph generation failed for {processed_file_path}.")
+            sys.exit(1)  # Exit if KG generation fails
 
 def main():
     """
@@ -184,15 +216,16 @@ def main():
             sys.exit(1)
 
         # Process the data
-        processed_file_path = process_data(args.json_file_path, args.data_type.upper(), args.platform, args)
+        processed_files = process_data(args.json_file_path, args.data_type.upper(), args.platform, args)
 
-        if processed_file_path:
-            logging.info(f"Processed data saved to: {processed_file_path}")
-
-            csv_file_path = generate_knowledge_graph(processed_file_path, args.data_type, args)
-            if not csv_file_path:
-                logging.error("Knowledge graph generation failed.")
-                sys.exit(1)  # Exit if KG generation fails
+        if processed_files:
+            if args.data_type.upper() == "MITRE":
+                process_mitre_data(processed_files, args.data_type, args)
+            else:
+                csv_file_path = generate_knowledge_graph(processed_files, args.data_type, args)
+                if not csv_file_path:
+                    logging.error("Knowledge graph generation failed.")
+                    sys.exit(1)  # Exit if KG generation fails
         else:
             logging.error("Data processing failed.")
             sys.exit(1)  # Exit if data processing fails
