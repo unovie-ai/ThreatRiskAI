@@ -2,9 +2,11 @@ import argparse
 import json
 import logging
 import os
+from typing import List
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 PLATFORM_MAPPING = {
     "containers": ["container", "containers", "docker", "podman", "kubernetes"]
@@ -46,7 +48,7 @@ def process_mitre(json_file_path, platform, args):
         """
         return PLATFORM_MAPPING.get(target_platform, [target_platform])
 
-    def platform_check(mitre_object, target_platform):
+    def platform_check(mitre_object: dict, target_platform: str) -> bool:
         """
         Checks if a MITRE ATT&CK object is relevant to the specified platform.
 
@@ -73,24 +75,46 @@ def process_mitre(json_file_path, platform, args):
         logging.debug(f"Technique {mitre_object.get('name')} excluded: No platform match")
         return False
 
-    # Filter the MITRE ATT&CK objects based on the platform
-    filtered_objects = []
-    for mitre_object in mitre_data.get("objects", []):
+    # Filter MITRE ATT&CK objects based on the platform
+    filtered_techniques = []
+    all_objects = mitre_data.get("objects", [])
+    for mitre_object in all_objects:
         if mitre_object.get("type") == "attack-pattern":
             if platform_check(mitre_object, platform):
-                filtered_objects.append(mitre_object)
+                filtered_techniques.append(mitre_object)
             else:
-                logging.debug(f"Technique {mitre_object.get('name')} excluded due to platform mismatch")
+                logging.debug(
+                    f"Technique {mitre_object.get('name')} excluded due to platform mismatch"
+                )
 
-    # Create a new MITRE ATT&CK JSON structure with the filtered objects
-    filtered_data = {
-        "objects": filtered_objects,
-        "type": mitre_data.get("type"),
-        "id": mitre_data.get("id"),
-        "spec_version": mitre_data.get("spec_version")
+    # Extract IDs of filtered techniques
+    filtered_technique_ids = {
+        technique.get("id") for technique in filtered_techniques
     }
 
-    if not filtered_objects:
+    # Identify related objects
+    related_objects = []
+    for mitre_object in all_objects:
+        # Check if the object references any of the filtered technique IDs
+        if any(
+            ref in filtered_technique_ids
+            for key, ref in mitre_object.items()
+            if key.endswith("_ref") and isinstance(ref, str)
+        ):
+            related_objects.append(mitre_object)
+
+    # Combine filtered techniques and related objects
+    combined_objects = filtered_techniques + related_objects
+
+    # Create a new MITRE ATT&CK JSON structure with the combined objects
+    filtered_data = {
+        "objects": combined_objects,
+        "type": mitre_data.get("type"),
+        "id": mitre_data.get("id"),
+        "spec_version": mitre_data.get("spec_version"),
+    }
+
+    if not filtered_techniques:
         logging.warning(f"No relevant techniques found for platform {platform}")
         return None
 
