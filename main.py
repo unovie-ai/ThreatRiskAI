@@ -135,10 +135,11 @@ def main():
     parser = argparse.ArgumentParser(description="Process threat data (MITRE or CVE) based on the specified platform.")
     parser.add_argument("data_type", help="Type of data (MITRE or CVE)", nargs='?')
     parser.add_argument("platform", help="Target platform (e.g., containers, Windows, Linux)", nargs='?')
-    parser.add_argument("json_file_path", help="Path to the input JSON file", nargs='?')
+    parser.add_argument("json_file_path", help="Path to the input JSON file", nargs='?', default=None)
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
     parser.add_argument("--skip-kg", action="store_true", help="Skip knowledge graph generation")
     parser.add_argument("--embed", action="store_true", help="Embed the knowledge graph into the database")
+    parser.add_argument("--processed-data", help="Path to the directory containing processed JSON files for KG generation", default=None)
     parser.add_argument("--kg-directory", default="knowledge_graphs", help="Directory containing the knowledge graph CSV files")
     args = parser.parse_args()
 
