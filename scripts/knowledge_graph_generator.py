@@ -488,7 +488,7 @@ def save_knowledge_graph(graph, base_filename):
         # Extract and write relationships from the JSON file
         with open(args.json_file_path, 'r') as json_file:
             json_data = json.load(json_file)
-            if 'objects' in json_
+            if 'objects' in json_data:
                 for obj in json_data['objects']:
                     if obj['type'] == 'relationship':
                         source_ref = obj.get('source_ref', 'Unknown Source')
