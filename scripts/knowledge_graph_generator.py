@@ -310,7 +310,9 @@ def create_mitre_knowledge_graph(json_file_path, args):
                   Version=attack_pattern.get("x_mitre_version", "1.0"),
                   Source="MITRE ATT&CK",
                   Description=attack_pattern.get("description", ""),
-                  Detection=attack_pattern.get("x_mitre_detection", ""))
+                  Detection=attack_pattern.get("x_mitre_detection", ""),
+                  Data_Sources=attack_pattern.get("x_mitre_data_sources", []),
+                  Permissions_Required=attack_pattern.get("x_mitre_permissions_required", []))
 
         # Add platform relationships
         for platform in platforms:
@@ -355,14 +357,16 @@ def create_mitre_knowledge_graph(json_file_path, args):
             for ref in attack_pattern["external_references"]:
                 if ref.get("url"):
                     ref_id = f"REFERENCE_{uuid.uuid4().hex[:8]}"
+                    source_name = ref.get("source_name", "Reference")
+                    url = ref.get("url", "No URL")
                     G.add_node(ref_id,
                              Type="Reference",
-                             Label=ref.get("source_name", "Reference"),
-                             URL=ref["url"],
+                             Label=source_name,
+                             URL=url,
                              Description=f"External reference for {technique_name}")
                     G.add_edge(mitre_id, ref_id,
                              Relationship="HAS_REFERENCE",
-                             Reference_Type=ref.get("source_name", "Generic"))
+                             Reference_Type=source_name)
 
         # Process relationships with other techniques
         for rel in [obj for obj in objects if obj.get("source_ref") == mitre_id]:
