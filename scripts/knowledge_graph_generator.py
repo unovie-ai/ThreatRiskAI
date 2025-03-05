@@ -442,7 +442,7 @@ def add_technique_and_subtechniques(graph, parent_id, technique, objects):
             add_technique_and_subtechniques(graph, technique_node_id, sub_technique, objects)
 
 
-def save_knowledge_graph(graph, base_filename):
+def save_knowledge_graph(graph, base_filename, args):
     """
     Saves the knowledge graph in GML format and a combined CSV format.
 
@@ -713,7 +713,7 @@ def main():
 
         # Save the knowledge graph
         base_filename = os.path.join(KNOWLEDGE_GRAPHS_DIR, file_name)
-        save_knowledge_graph(graph, base_filename)
+        save_knowledge_graph(graph, base_filename, args)
 
         # Visualize the knowledge graph
         visualization_filename = os.path.join(VISUALIZATION_DIR, file_name)
