@@ -485,6 +485,31 @@ def save_knowledge_graph(graph, base_filename):
                 edge_id = f"{source}_relates_to_{target}".replace(" ", "_")  # Generate a unique ID
             f.write(f'"{edge_id}","{relationship} ({edge_type})"\n')
 
+        # Extract and write relationships from the JSON file
+        with open(args.json_file_path, 'r') as json_file:
+            json_data = json.load(json_file)
+            if 'objects' in json_
+                for obj in json_data['objects']:
+                    if obj['type'] == 'relationship':
+                        source_ref = obj.get('source_ref', 'Unknown Source')
+                        target_ref = obj.get('target_ref', 'Unknown Target')
+                        relationship_type = obj.get('relationship_type', 'Unknown Relationship')
+                        description = obj.get('description', 'No Description')
+                        rel_id = obj.get('id', f"{source_ref}_TO_{target_ref}")
+
+                        # Determine the relationship type and format the text accordingly
+                        if relationship_type == 'uses':
+                            rel_text = f"Uses: {description}"
+                        elif relationship_type == 'mitigates':
+                            rel_text = f"Mitigates: {description}"
+                        elif relationship_type == 'detects':
+                            rel_text = f"Detects: {description}"
+                        else:
+                            rel_text = f"{relationship_type}: {description}"
+
+                        # Write the relationship to the CSV file
+                        f.write(f'"{rel_id}","{rel_text}"\n')
+
     logging.info(f"Combined knowledge graph data saved as CSV: {combined_path}")
 
 
