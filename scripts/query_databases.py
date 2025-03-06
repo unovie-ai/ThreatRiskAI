@@ -104,12 +104,14 @@ def main():
                 logging.error(f"Error querying database: {stderr.decode()}")
                 continue
 
-            all_stdout.append(stdout)
+            # Strip whitespace from the output and append
+            all_stdout.append(stdout.strip())
 
         # Pipe the output of all similar commands to the final command
         if all_stdout:
-            # Concatenate all stdout
-            input_data = b"\n".join(all_stdout)
+            # Concatenate all stdout with a more descriptive delimiter
+            delimiter = b"\n---\n"
+            input_data = delimiter.join(all_stdout)
 
             final_command_str = ' '.join(final_command)
             logging.info(f"Executing final command: {final_command_str}")
