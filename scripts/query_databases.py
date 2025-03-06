@@ -83,7 +83,7 @@ def main():
                 "llm", "similar", collection_name,
                 "-n", str(NUM_RESULTS),
                 "-d", db_path,
-                "-c", f"\"{subject}\""
+                "-c", subject
             ]
             similar_commands.append(similar_command)
 
