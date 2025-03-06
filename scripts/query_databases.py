@@ -111,7 +111,8 @@ def main():
             # Concatenate all stdout
             input_data = b"\n".join(all_stdout)
 
-            logging.info(f"Executing final command: {' '.join(final_command)}")
+            final_command_str = ' '.join(final_command)
+            logging.info(f"Executing final command: {final_command_str}")
             final_process = subprocess.Popen(final_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = final_process.communicate(input=input_data)
         else:
