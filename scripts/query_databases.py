@@ -104,7 +104,7 @@ def main():
         combined_results = delimiter.join(similar_results)
 
         # Combine query and context into a single string
-        llm_input = f"\"{args.query}\nContext:\n{combined_results}\""
+        llm_input = f"\"{args.query} Context: {combined_results}\""
 
         # Construct the final llm command
         final_command = [
