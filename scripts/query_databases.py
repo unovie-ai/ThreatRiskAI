@@ -103,10 +103,13 @@ def main():
         delimiter = "\\n---\\n"  # Using a more distinct delimiter
         combined_results = delimiter.join(similar_results)
 
+        # Combine query and context into a single string
+        llm_input = f"\"{args.query}\nContext:\n{combined_results}\""
+
         # Construct the final llm command
         final_command = [
             "llm", "-m", LLM_MODEL,
-            f"\"{args.query}\nContext:\n{combined_results}\""
+            llm_input
         ]
 
         logging.info(f"Executing final command: {' '.join(final_command)}")
