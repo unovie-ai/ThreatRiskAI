@@ -113,6 +113,10 @@ def main():
             delimiter = b"\n---\n"
             input_data = delimiter.join(all_stdout)
 
+            # Log the context to a file
+            with open(os.path.join("logs", "context.log"), "wb") as f:
+                f.write(input_data)
+
             final_command_str = ' '.join(final_command)
             logging.info(f"Executing final command: {final_command_str}")
             final_process = subprocess.Popen(final_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
