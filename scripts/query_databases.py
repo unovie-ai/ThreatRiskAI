@@ -95,10 +95,13 @@ def main():
                 logging.error(f"Error querying database {db_path}: {stderr.decode()}")
                 continue
 
-            similar_results.append(stdout.decode().strip())
+            result = stdout.decode().strip()
+            if result:  # Only add if the result is not empty
+                similar_results.append(result)
 
-        # Concatenate the results
-        combined_results = "\\n".join(similar_results)
+        # Concatenate the results with a custom delimiter
+        delimiter = "\\n---\\n"  # Using a more distinct delimiter
+        combined_results = delimiter.join(similar_results)
 
         # Construct the final llm command
         final_command = [
