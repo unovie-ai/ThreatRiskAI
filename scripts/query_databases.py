@@ -76,29 +76,6 @@ def main():
         # Fetch database and collection pairs from environment variable
         db_collection_pairs = [pair.split(":") for pair in DATABASE_COLLECTIONS.split(",")]
 
-        # Collect similar results from all databases
-        similar_results = []
-        for db_path, collection_name in db_collection_pairs:
-            # Construct the llm similar command
-            similar_command = [
-                "llm", "similar", collection_name,
-                "-n", str(NUM_RESULTS),
-                "-d", db_path,
-                "-c", f"\"{subject}\""
-            ]
-
-            logging.info(f"Executing command: {' '.join(similar_command)}")
-            process = subprocess.Popen(similar_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-
-            if process.returncode != 0:
-                logging.error(f"Error querying database {db_path}: {stderr.decode()}")
-                continue
-
-            result = stdout.decode().strip()
-            if result:  # Only add if the result is not empty
-                similar_results.append(result)
-
         # Construct the llm similar command
         similar_commands = []
         for db_path, collection_name in db_collection_pairs:
