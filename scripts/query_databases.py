@@ -14,7 +14,7 @@ dotenv.load_dotenv()
 
 # Constants from environment variables
 LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.0-flash-exp")
-NUM_RESULTS = int(os.getenv("NUM_RESULTS", "20"))
+NUM_RESULTS = int(os.getenv("NUM_RESULTS", "10"))
 DATABASE_COLLECTIONS = os.getenv("DATABASES", "db/threats.db:threats")
 
 def extract_subject(query):
