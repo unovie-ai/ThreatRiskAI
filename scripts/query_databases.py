@@ -106,7 +106,7 @@ def main():
         # Construct the final llm command
         final_command = [
             "llm", "-m", LLM_MODEL,
-            f"\"{args.query}\\nContext:\\n{combined_results}\""
+            f"\"{args.query}\nContext:\n{combined_results}\""
         ]
 
         logging.info(f"Executing final command: {' '.join(final_command)}")
