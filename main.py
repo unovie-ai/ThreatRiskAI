@@ -36,9 +36,9 @@ def process_data(json_file_path, data_type, platform, args):
 
     try:
         if data_type.upper() == "MITRE":
-            script_path = "scripts/mitre_processor.py"
+            script_path = "ingestion/mitre_processor.py"
         elif data_type.upper() == "CVE":
-            script_path = "scripts/cve_processor.py"
+            script_path = "ingestion/cve_processor.py"
         else:
             raise ValueError("Invalid data_type. Must be 'MITRE' or 'CVE'.")
 
@@ -117,7 +117,7 @@ def generate_knowledge_graph(json_file_path: str, data_type: str, args: argparse
 
         command = [
             "python",
-            "scripts/knowledge_graph_generator.py",
+            "ingestion/knowledge_graph_generator.py",
             json_file_path,
             data_type.lower()
         ]
@@ -191,7 +191,7 @@ def main():
         # Call db_updater.py to embed the knowledge graph into the database
         command = [
             "python",
-            "scripts/db_updater.py",
+            "ingestion/db_updater.py",
             args.data_type,
             args.platform,
             args.kg_directory.rstrip('/')
