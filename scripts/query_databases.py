@@ -76,45 +76,60 @@ def main():
         # Fetch database and collection pairs from environment variable
         db_collection_pairs = [pair.split(":") for pair in DATABASE_COLLECTIONS.split(",")]
 
-        # Collect similar results from all databases
-        similar_results = []
+        # Construct the llm similar command
+        similar_commands = []
         for db_path, collection_name in db_collection_pairs:
-            # Construct the llm similar command
             similar_command = [
                 "llm", "similar", collection_name,
                 "-n", str(NUM_RESULTS),
                 "-d", db_path,
-                "-c", f"\"{subject}\""
+                "-c", subject
             ]
-
-            logging.info(f"Executing command: {' '.join(similar_command)}")
-            process = subprocess.Popen(similar_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-
-            if process.returncode != 0:
-                logging.error(f"Error querying database {db_path}: {stderr.decode()}")
-                continue
-
-            similar_results.append(stdout.decode().strip())
-
-        # Concatenate the results
-        combined_results = "\\n".join(similar_results)
+            similar_commands.append(similar_command)
 
         # Construct the final llm command
         final_command = [
             "llm", "-m", LLM_MODEL,
-            f"\"{args.query}\\nContext:\\n{combined_results}\""
+            f"\"{args.query}\""
         ]
 
-        logging.info(f"Executing final command: {' '.join(final_command)}")
-        final_process = subprocess.Popen(final_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = final_process.communicate()
+        # Execute the similar commands and pipe the output to the final command
+        all_stdout = []
+        for command in similar_commands:
+            logging.info(f"Executing similar command: {' '.join(command)}")
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0:
+                logging.error(f"Error querying database: {stderr.decode()}")
+                continue
+
+            # Strip whitespace from the output and append
+            all_stdout.append(stdout.strip())
+
+        # Pipe the output of all similar commands to the final command
+        if all_stdout:
+            # Concatenate all stdout with a more descriptive delimiter
+            delimiter = b"\n---\n"
+            input_data = delimiter.join(all_stdout)
+
+            final_command_str = ' '.join(final_command)
+            logging.info(f"Executing final command: {final_command_str}")
+            final_process = subprocess.Popen(final_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = final_process.communicate(input=input_data)
+        else:
+            stdout = b""
+            stderr = b"No data from similar commands"
+            final_process = type('obj', (object,), {'returncode': 1})()
 
         if final_process.returncode != 0:
             logging.error(f"Error generating final response: {stderr.decode()}")
+            if stderr:
+                logging.error(f"Error generating final response: {stderr.decode()}")
             return None
 
         response = stdout.decode().strip()
+        print(response)
         return response
 
     except FileNotFoundError:
@@ -125,6 +140,4 @@ def main():
         return None
 
 if __name__ == "__main__":
-    response = main()
-    if response:
-        print(response)
+    main()

@@ -23,7 +23,7 @@ process_file() {
   log "Processing file: $file (Data Type: $data_type, Platform: $platform)"
 
   # Execute main.py with the specified arguments and redirect output to the log file
-  python main.py "$file" "$data_type" "$platform" --verbose 2>&1 | tee -a "$log_file"
+  python main.py "$data_type" "$platform" "$file" --verbose 2>&1 | tee -a "$log_file"
 
   # Check the exit code of the python script
   if [ $? -eq 0 ]; then
