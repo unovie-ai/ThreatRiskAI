@@ -11,7 +11,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
+      - ..:/app
     environment:
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
