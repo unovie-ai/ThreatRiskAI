@@ -13,4 +13,4 @@ RUN set -x && \
     pip install --no-cache-dir werkzeug==3.0.1 && \
     pip install --no-cache-dir markupsafe==2.1.5
 
-CMD ["python", "app.py"]
+CMD ["python", "/app/app.py"]
