@@ -35,11 +35,3 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: threats
-
-volumes:
-  db_
-```
-
-docker/Dockerfile
-```
-<<<<<<< SEARCH
