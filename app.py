@@ -145,7 +145,7 @@ def query_database():
         # Call scripts/query_databases.py to retrieve results
         command = [
             "python",
-            "scripts/query_databases.py",
+            "inference/query_databases.py",
             query
         ]
         logging.info(f"Executing: {' '.join(command)}")
