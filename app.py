@@ -43,7 +43,6 @@ def allowed_file(filename):
 
 # API endpoint for file upload
 @app.route('/upload', methods=['POST'])
-@app.route('/upload', methods=['POST'])
 @swag_from({
     'summary': 'Upload a threat data file for processing',
     'consumes': ['multipart/form-data'],
@@ -99,9 +98,9 @@ def upload_file():
             command = [
                 "python",
                 "main.py",
+                file_path,
                 data_type.upper(),
                 platform,
-                file_path,
                 '-v'
             ]
             logging.info(f"Executing: {' '.join(command)}")
