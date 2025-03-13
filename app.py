@@ -173,7 +173,8 @@ def embed_knowledge_graph():
             "--embed",
             "--data_type", data_type.upper(),
             "--platform", platform,
-            "--kg-directory", kg_directory
+            "--kg-directory", kg_directory,
+            '-v'
         ]
         logging.info(f"Executing: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
