@@ -100,7 +100,7 @@ def upload_file():
                 "python",
                 "main.py",
                 file_path,
-                data_type,
+                data_type.upper(),
                 platform
             ]
             logging.info(f"Executing: {' '.join(command)}")
