@@ -173,8 +173,10 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
     parser.add_argument("--skip-kg", action="store_true", help="Skip knowledge graph generation")
     parser.add_argument("--embed", action="store_true", help="Embed the knowledge graph into the database")
-    parser.add_argument("--processed-data", help="Path to the directory containing processed JSON files for KG generation", default=None)
+    parser.add_argument("--data_type", help="Type of data (MITRE or CVE)", choices=['MITRE', 'CVE'])
+    parser.add_argument("--platform", help="Target platform (e.g., containers, Windows, Linux)")
     parser.add_argument("--kg-directory", default="knowledge_graphs", help="Directory containing the knowledge graph CSV files")
+    parser.add_argument("--processed-data", help="Path to the directory containing processed JSON files for KG generation", default=None)
     args = parser.parse_args()
 
     # Set logging level based on verbosity
@@ -182,8 +184,8 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if args.embed:
-        if not (args.data_type and args.platform):
-            parser.error("--embed requires data_type and platform to be specified")
+        if not (args.data_type and args.platform and args.kg_directory):
+            parser.error("--embed requires data_type, platform, and kg_directory to be specified")
             sys.exit(1)
 
         csv_file_path = os.path.join(args.kg_directory, f"{args.data_type.lower()}.csv")
@@ -192,7 +194,7 @@ def main():
         command = [
             "python",
             "ingestion/db_updater.py",
-            args.data_type,
+            args.data_type.upper(),
             args.platform,
             args.kg_directory.rstrip('/')
         ]
