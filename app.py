@@ -12,6 +12,7 @@ from marshmallow import ValidationError
 # Initialize Flask application
 app = Flask(__name__)
 app.config.from_object(config)
+app.config['TRAP_HTTP_EXCEPTIONS'] = True
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
