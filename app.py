@@ -2,12 +2,12 @@ import os
 import logging
 import subprocess
 from flask import Flask, request, jsonify
-from flasgger import Swagger
-from flasgger.utils import swag_from
+# from flasgger import Swagger  # Comment out flasgger import
+# from flasgger.utils import swag_from  # Comment out swag_from import
 from werkzeug.utils import secure_filename
 import config
-from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
-from marshmallow import ValidationError
+# from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema  # Comment out models import
+# from marshmallow import ValidationError  # Comment out marshmallow import
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -17,25 +17,25 @@ app.config['TRAP_HTTP_EXCEPTIONS'] = True
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Swagger configuration
-swagger_config = {
-    "openapi": "3.0.0",
-    "headers": [
-    ],
-    "specs": [
-        {
-            "endpoint": 'apispec_1',
-            "route": '/apispec_1.json',
-            "rule_filter": lambda rule: True,  # all in
-            "model_filter": lambda tag: True,  # all in
-        }
-    ],
-    "static_url_path": "/flasgger_static",
-    "swagger_ui": True,
-    "specs_route": "/apidocs/"
-}
+# # Swagger configuration  # Comment out Swagger configuration
+# swagger_config = {
+#     "openapi": "3.0.0",
+#     "headers": [
+#     ],
+#     "specs": [
+#         {
+#             "endpoint": 'apispec_1',
+#             "route": '/apispec_1.json',
+#             "rule_filter": lambda rule: True,  # all in
+#             "model_filter": lambda tag: True,  # all in
+#         }
+#     ],
+#     "static_url_path": "/flasgger_static",
+#     "swagger_ui": True,
+#     "specs_route": "/apidocs/"
+# }
 
-swagger = Swagger(app, config=swagger_config)
+# swagger = Swagger(app, config=swagger_config)  # Comment out Swagger initialization
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
@@ -43,39 +43,39 @@ def allowed_file(filename):
 
 # API endpoint for file upload
 @app.route('/upload', methods=['POST'])
-@swag_from({
-    'summary': 'Upload a threat data file for processing',
-    'consumes': ['multipart/form-data'],
-    'parameters': [
-        {
-            'name': 'data_type',
-            'in': 'formData',
-            'type': 'string',
-            'required': True,
-            'enum': ['CVE', 'MITRE'],
-            'description': 'Type of data (CVE or MITRE)'
-        },
-        {
-            'name': 'platform',
-            'in': 'formData',
-            'type': 'string',
-            'required': True,
-            'description': 'Target platform (e.g., containers, Windows)'
-        },
-        {
-            'name': 'file',
-            'in': 'formData',
-            'type': 'file',
-            'required': True,
-            'description': 'The JSON file to upload'
-        }
-    ],
-    'responses': {
-        '200': {'description': 'File uploaded and processing initiated successfully'},
-        '400': {'description': 'Invalid request parameters or file format', 'schema': ErrorResponseSchema},
-        '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
-    }
-})
+# @swag_from({  # Comment out swag_from decorator
+#     'summary': 'Upload a threat data file for processing',
+#     'consumes': ['multipart/form-data'],
+#     'parameters': [
+#         {
+#             'name': 'data_type',
+#             'in': 'formData',
+#             'type': 'string',
+#             'required': True,
+#             'enum': ['CVE', 'MITRE'],
+#             'description': 'Type of data (CVE or MITRE)'
+#         },
+#         {
+#             'name': 'platform',
+#             'in': 'formData',
+#             'type': 'string',
+#             'required': True,
+#             'description': 'Target platform (e.g., containers, Windows)'
+#         },
+#         {
+#             'name': 'file',
+#             'in': 'formData',
+#             'type': 'file',
+#             'required': True,
+#             'description': 'The JSON file to upload'
+#         }
+#     ],
+#     'responses': {
+#         '200': {'description': 'File uploaded and processing initiated successfully'},
+#         '400': {'description': 'Invalid request parameters or file format', 'schema': ErrorResponseSchema},
+#         '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
+#     }
+# })
 def upload_file():
     try:
         # Check if the request has the data_type, platform and file part
@@ -122,39 +122,39 @@ def upload_file():
 
 # API endpoint for embedding the knowledge graph
 @app.route('/embed', methods=['POST'])
-@swag_from({
-    'summary': 'Embed the knowledge graph into the database',
-    'consumes': ['application/json'],
-    'parameters': [
-        {
-            'name': 'data_type',
-            'in': 'json',
-            'type': 'string',
-            'required': True,
-            'enum': ['CVE', 'MITRE'],
-            'description': 'Type of data (CVE or MITRE)'
-        },
-        {
-            'name': 'platform',
-            'in': 'json',
-            'type': 'string',
-            'required': True,
-            'description': 'Target platform (e.g., containers, Windows)'
-        },
-        {
-            'name': 'kg_directory',
-            'in': 'json',
-            'type': 'string',
-            'required': True,
-            'description': 'Directory containing the knowledge graph CSV files'
-        }
-    ],
-    'responses': {
-        '200': {'description': 'Knowledge graph embedded successfully'},
-        '400': {'description': 'Invalid request parameters', 'schema': ErrorResponseSchema},
-        '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
-    }
-})
+# @swag_from({  # Comment out swag_from decorator
+#     'summary': 'Embed the knowledge graph into the database',
+#     'consumes': ['application/json'],
+#     'parameters': [
+#         {
+#             'name': 'data_type',
+#             'in': 'json',
+#             'type': 'string',
+#             'required': True,
+#             'enum': ['CVE', 'MITRE'],
+#             'description': 'Type of data (CVE or MITRE)'
+#         },
+#         {
+#             'name': 'platform',
+#             'in': 'json',
+#             'type': 'string',
+#             'required': True,
+#             'description': 'Target platform (e.g., containers, Windows)'
+#         },
+#         {
+#             'name': 'kg_directory',
+#             'in': 'json',
+#             'type': 'string',
+#             'required': True,
+#             'description': 'Directory containing the knowledge graph CSV files'
+#         }
+#     ],
+#     'responses': {
+#         '200': {'description': 'Knowledge graph embedded successfully'},
+#         '400': {'description': 'Invalid request parameters', 'schema': ErrorResponseSchema},
+#         '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
+#     }
+# })
 def embed_knowledge_graph():
     try:
         data = request.get_json()
@@ -192,33 +192,34 @@ def embed_knowledge_graph():
 
 # API endpoint for querying the database
 @app.route('/query', methods=['GET'])
-@swag_from({
-    'summary': 'Query the threat intelligence database',
-    'parameters': [
-        {
-            'name': 'query',
-            'in': 'query',
-            'required': 'true',
-            'type': 'string',
-            'description': 'The query string to search the database'
-        }
-    ],
-    'responses': {
-        '200': {'description': 'Successful query', 'schema': QueryResponseSchema},
-        '400': {'description': 'Query parameter is missing', 'schema': ErrorResponseSchema},
-        '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
-    }
-})
+# @swag_from({  # Comment out swag_from decorator
+#     'summary': 'Query the threat intelligence database',
+#     'parameters': [
+#         {
+#             'name': 'query',
+#             'in': 'query',
+#             'required': 'true',
+#             'type': 'string',
+#             'description': 'The query string to search the database'
+#         }
+#     ],
+#     'responses': {
+#         '200': {'description': 'Successful query', 'schema': QueryResponseSchema},
+#         '400': {'description': 'Query parameter is missing', 'schema': ErrorResponseSchema},
+#         '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
+#     }
+# })
 def query_database():
     try:
         # Validate request using schema
-        schema = QueryRequestSchema()
-        try:
-            query_data = schema.load(request.args)
-        except ValidationError as err:
-            return jsonify({'error': err.messages}), 400
+        # schema = QueryRequestSchema()  # Comment out schema initialization
+        # try:  # Comment out try-except block
+        #     query_data = schema.load(request.args)
+        # except ValidationError as err:
+        #     return jsonify({'error': err.messages}), 400
 
-        query = query_data['query']
+        # query = query_data['query']  # Comment out query assignment
+        query = request.args.get('query')
 
         # Call scripts/query_databases.py to retrieve results
         command = [
