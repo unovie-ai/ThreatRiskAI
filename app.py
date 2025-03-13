@@ -99,9 +99,10 @@ def upload_file():
             command = [
                 "python",
                 "main.py",
-                file_path,
                 data_type.upper(),
-                platform
+                platform,
+                file_path,
+                '-v'
             ]
             logging.info(f"Executing: {' '.join(command)}")
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
