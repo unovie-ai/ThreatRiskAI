@@ -6,7 +6,7 @@ from flasgger import Swagger
 from flasgger.utils import swag_from
 from werkzeug.utils import secure_filename
 import config
-from models import UploadRequestSchema, QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
+from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
 from marshmallow import ValidationError
 
 # Initialize Flask application
@@ -42,23 +42,32 @@ def allowed_file(filename):
 
 # API endpoint for file upload
 @app.route('/upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])
 @swag_from({
     'summary': 'Upload a threat data file for processing',
-    'consumes': ['application/json'],
+    'consumes': ['multipart/form-data'],
     'parameters': [
         {
-            'name': 'body',
-            'in': 'body',
-            'required': 'true',
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'data_type': {'type': 'string', 'enum': ['CVE', 'MITRE'], 'description': 'Type of data (CVE or MITRE)'},
-                    'platform': {'type': 'string', 'description': 'Target platform (e.g., containers, Windows)'},
-                    'file_content': {'type': 'string', 'description': 'JSON file content as a string'}
-                },
-                'required': ['data_type', 'platform', 'file_content']
-            }
+            'name': 'data_type',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'enum': ['CVE', 'MITRE'],
+            'description': 'Type of data (CVE or MITRE)'
+        },
+        {
+            'name': 'platform',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Target platform (e.g., containers, Windows)'
+        },
+        {
+            'name': 'file',
+            'in': 'formData',
+            'type': 'file',
+            'required': True,
+            'description': 'The JSON file to upload'
         }
     ],
     'responses': {
@@ -69,45 +78,42 @@ def allowed_file(filename):
 })
 def upload_file():
     try:
-        request.data = None
-        # Validate request using schema
-        schema = UploadRequestSchema()
-        try:
-            request_data = schema.load(request.json)
-        except ValidationError as err:
-            return jsonify({'error': err.messages}), 400
+        # Check if the request has the data_type, platform and file part
+        if 'data_type' not in request.form or 'platform' not in request.form or 'file' not in request.files:
+            return jsonify({'error': 'Missing data_type, platform or file'}), 400
 
-        data_type = request_data['data_type']
-        platform = request_data['platform']
-        file_content = request_data['file_content']
+        data_type = request.form['data_type']
+        platform = request.form['platform']
+        file = request.files['file']
 
-        # Create a temporary file to store the file content
-        filename = "temp_upload.json"  # You might want to generate a unique filename
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # Check if the file is one of the allowed types/extensions
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
 
-        with open(file_path, 'w') as f:
-            f.write(file_content)
+            logging.info(f"File saved to: {file_path}")
 
-        logging.info(f"File saved to: {file_path}")
+            # Call main.py to process the uploaded file
+            command = [
+                "python",
+                "main.py",
+                file_path,
+                data_type,
+                platform
+            ]
+            logging.info(f"Executing: {' '.join(command)}")
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
 
-        # Call main.py to process the uploaded file
-        command = [
-            "python",
-            "main.py",
-            file_path,
-            data_type,
-            platform
-        ]
-        logging.info(f"Executing: {' '.join(command)}")
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
+            if process.returncode != 0:
+                logging.error(f"Error processing file: {stderr.decode()}")
+                return jsonify({'error': f"File processing failed: {stderr.decode()}"}), 500
 
-        if process.returncode != 0:
-            logging.error(f"Error processing file: {stderr.decode()}")
-            return jsonify({'error': f"File processing failed: {stderr.decode()}"}), 500
-
-        logging.info(stdout.decode())
-        return jsonify({'message': 'File uploaded and processing initiated successfully.'}), 200
+            logging.info(stdout.decode())
+            return jsonify({'message': 'File uploaded and processing initiated successfully.'}), 200
+        else:
+            return jsonify({'error': 'Invalid file format. Allowed formats are json'}), 400
 
     except Exception as e:
         logging.exception("An error occurred during file upload and processing.")
