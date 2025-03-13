@@ -171,8 +171,8 @@ def embed_knowledge_graph():
             "python",
             "main.py",
             "--embed",
-            "--data_type", data_type.upper(),
-            "--platform", platform,
+             data_type.upper(),
+             platform,
             "--kg-directory", kg_directory,
             "-v"
         ]
