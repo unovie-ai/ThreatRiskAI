@@ -121,6 +121,75 @@ def upload_file():
         logging.exception("An error occurred during file upload and processing.")
         return jsonify({'error': str(e)}), 500
 
+# API endpoint for embedding the knowledge graph
+@app.route('/embed', methods=['POST'])
+@swag_from({
+    'summary': 'Embed the knowledge graph into the database',
+    'consumes': ['application/json'],
+    'parameters': [
+        {
+            'name': 'data_type',
+            'in': 'json',
+            'type': 'string',
+            'required': True,
+            'enum': ['CVE', 'MITRE'],
+            'description': 'Type of data (CVE or MITRE)'
+        },
+        {
+            'name': 'platform',
+            'in': 'json',
+            'type': 'string',
+            'required': True,
+            'description': 'Target platform (e.g., containers, Windows)'
+        },
+        {
+            'name': 'kg_directory',
+            'in': 'json',
+            'type': 'string',
+            'required': True,
+            'description': 'Directory containing the knowledge graph CSV files'
+        }
+    ],
+    'responses': {
+        '200': {'description': 'Knowledge graph embedded successfully'},
+        '400': {'description': 'Invalid request parameters', 'schema': ErrorResponseSchema},
+        '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
+    }
+})
+def embed_knowledge_graph():
+    try:
+        data = request.get_json()
+        data_type = data.get('data_type')
+        platform = data.get('platform')
+        kg_directory = data.get('kg_directory')
+
+        if not all([data_type, platform, kg_directory]):
+            return jsonify({'error': 'Missing data_type, platform, or kg_directory'}), 400
+
+        # Call main.py with the embed option
+        command = [
+            "python",
+            "main.py",
+            "--embed",
+            "--data_type", data_type.upper(),
+            "--platform", platform,
+            "--kg-directory", kg_directory
+        ]
+        logging.info(f"Executing: {' '.join(command)}")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            logging.error(f"Error embedding knowledge graph: {stderr.decode()}")
+            return jsonify({'error': f"Knowledge graph embedding failed: {stderr.decode()}"}), 500
+
+        logging.info(stdout.decode())
+        return jsonify({'message': 'Knowledge graph embedded successfully.'}), 200
+
+    except Exception as e:
+        logging.exception("An error occurred during knowledge graph embedding.")
+        return jsonify({'error': str(e)}), 500
+
 # API endpoint for querying the database
 @app.route('/query', methods=['GET'])
 @swag_from({
