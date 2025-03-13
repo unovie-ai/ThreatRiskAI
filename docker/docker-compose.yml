@@ -30,7 +30,7 @@ services:
   db:
     image: "postgres:13"
     volumes:
-      - db_/var/lib/postgresql/data
+      - db_:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
