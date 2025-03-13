@@ -69,6 +69,7 @@ def allowed_file(filename):
 })
 def upload_file():
     try:
+        request.data = None
         # Validate request using schema
         schema = UploadRequestSchema()
         try:
