@@ -1,5 +1,5 @@
 Flask==3.0.2
-flasgger==0.9.4
+flasgger==0.9.7
 python-dotenv==1.0.1
 marshmallow==3.21.0
 werkzeug==3.0.1
