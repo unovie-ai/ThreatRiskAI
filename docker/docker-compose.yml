@@ -15,7 +15,7 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - LLM_GEMINI_KEY=${GEMINI_API_KEY}
       - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash-exp}
       - NUM_RESULTS=${NUM_RESULTS:-10}
       - DATABASES=${DATABASES:-db/cve.db:containers,db/cve.db:windows,db/mitre.db:containers,db/mitre.db:windows}

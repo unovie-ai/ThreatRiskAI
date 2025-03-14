@@ -6,9 +6,8 @@ COPY . /app
 
 RUN set -x && \
     pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir python-dotenv==1.0.1 && \
-    pip install --no-cache-dir Flask==3.0.2 && \
-    pip install --no-cache-dir werkzeug==3.0.1 && \
-    pip install --no-cache-dir markupsafe==2.1.5
+    pip install -r requirements.txt && \
++   llm install llm-gemini && \
++   llm install llm-embed-jina
 
 CMD ["python", "/app/app.py"]
