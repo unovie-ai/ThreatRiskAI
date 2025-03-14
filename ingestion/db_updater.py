@@ -3,7 +3,6 @@ import logging
 import os
 import subprocess
 import sqlite3
-import configparser
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -23,10 +22,8 @@ def update_database(data_type, platform, kg_directory):
     db_file = f"{data_type.lower()}.db"
     db_path = os.path.join(DB_DIR, db_file)
 
-    # Read configuration from config.ini
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    embedding_model = config.get('llm', 'embedding_model', fallback='jina-embeddings-v2-small-en')
+    # Get embedding model from environment variable
+    embedding_model = os.getenv("EMBEDDING_MODEL", "jina-embeddings-v2-small-en")
 
     # Create database directory if it doesn't exist
     os.makedirs(DB_DIR, exist_ok=True)
