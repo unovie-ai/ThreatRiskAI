@@ -36,9 +36,9 @@ def process_data(json_file_path, data_type, platform, args):
 
     try:
         if data_type.upper() == "MITRE":
-            script_path = "scripts/mitre_processor.py"
+            script_path = "ingestion/mitre_processor.py"
         elif data_type.upper() == "CVE":
-            script_path = "scripts/cve_processor.py"
+            script_path = "ingestion/cve_processor.py"
         else:
             raise ValueError("Invalid data_type. Must be 'MITRE' or 'CVE'.")
 
@@ -117,7 +117,7 @@ def generate_knowledge_graph(json_file_path: str, data_type: str, args: argparse
 
         command = [
             "python",
-            "scripts/knowledge_graph_generator.py",
+            "ingestion/knowledge_graph_generator.py",
             json_file_path,
             data_type.lower()
         ]
@@ -173,8 +173,10 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
     parser.add_argument("--skip-kg", action="store_true", help="Skip knowledge graph generation")
     parser.add_argument("--embed", action="store_true", help="Embed the knowledge graph into the database")
-    parser.add_argument("--processed-data", help="Path to the directory containing processed JSON files for KG generation", default=None)
+    parser.add_argument("--data_type", help="Type of data (MITRE or CVE)", choices=['MITRE', 'CVE'])
+    parser.add_argument("--platform", help="Target platform (e.g., containers, Windows, Linux)")
     parser.add_argument("--kg-directory", default="knowledge_graphs", help="Directory containing the knowledge graph CSV files")
+    parser.add_argument("--processed-data", help="Path to the directory containing processed JSON files for KG generation", default=None)
     args = parser.parse_args()
 
     # Set logging level based on verbosity
@@ -182,8 +184,8 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if args.embed:
-        if not (args.data_type and args.platform):
-            parser.error("--embed requires data_type and platform to be specified")
+        if not (args.data_type and args.platform and args.kg_directory):
+            parser.error("--embed requires data_type, platform, and kg_directory to be specified")
             sys.exit(1)
 
         csv_file_path = os.path.join(args.kg_directory, f"{args.data_type.lower()}.csv")
@@ -191,8 +193,8 @@ def main():
         # Call db_updater.py to embed the knowledge graph into the database
         command = [
             "python",
-            "scripts/db_updater.py",
-            args.data_type,
+            "ingestion/db_updater.py",
+            args.data_type.upper(),
             args.platform,
             args.kg_directory.rstrip('/')
         ]
