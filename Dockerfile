@@ -7,7 +7,7 @@ COPY . /app
 RUN set -x && \
     pip install --no-cache-dir --upgrade pip && \
     pip install -r requirements.txt && \
-+   llm install llm-gemini && \
-+   llm install llm-embed-jina
+    llm install ${LLM_GEMINI_INSTALL:-llm-gemini} && \
+    llm install ${LLM_EMBED_INSTALL:-llm-embed-jina}
 
 CMD ["python", "/app/app.py"]
