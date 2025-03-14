@@ -97,10 +97,10 @@ def upload_file():
             # Call main.py to process the uploaded file
             command = [
                 "python",
-                "main.py",
-                file_path,
+                "main.py",               
                 data_type.upper(),
                 platform,
+                file_path,
                 '-v'
             ]
             logging.info(f"Executing: {' '.join(command)}")
