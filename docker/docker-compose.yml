@@ -1,0 +1,35 @@
+version: "3.8"
+
+volumes:
+  db_:
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/app
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_DEBUG=1
+      - LLM_GEMINI_KEY=${GEMINI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gemini-2.0-flash-exp}
+      - NUM_RESULTS=${NUM_RESULTS:-10}
+      - DATABASES=${DATABASES:-db/cve.db:containers,db/cve.db:windows,db/mitre.db:containers,db/mitre.db:windows}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-jina-embeddings-v2-small-en}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=threats
+    depends_on:
+      - db
+  db:
+    image: "postgres:13"
+    volumes:
+      - db_:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: threats
