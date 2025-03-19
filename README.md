@@ -4,15 +4,42 @@ Threat Risk Assessment for SBOM using GENAI
 ## Project Structure
 
 ```
-│── /data                   # Raw JSON files (CVE, MITRE, etc.)
-│── /knowledge_graphs        # Stores CSV files of extracted knowledge graphs
-│── /knowledge_graphs/visualization  # Stores HTML visualizations
-│── /db                     # Stores threats.db (Flat database)
-│── /scripts                 # Python scripts (modular but final output will be single program)
-│── .env                     # API keys, configurations (LLM model, number of results, database configurations)
-│── requirements.txt         # Dependencies
-│── main.py                  # Final executable Python program
-│── README.md
+.
+├── LICENSE
+├── README.md
+├── app
+│   ├── Dockerfile
+│   ├── __pycache__
+│   │   └── config.cpython-311.pyc
+│   ├── app.py
+│   ├── config.py
+│   ├── inference
+│   │   ├── __init__.py
+│   │   └── query_databases.py
+│   ├── ingestion
+│   │   ├── __init__.py
+│   │   ├── cve_processor.py
+│   │   ├── db_updater.py
+│   │   ├── db_updater_row.py
+│   │   ├── knowledge_graph_generator.py
+│   │   └── mitre_processor.py
+│   ├── main.py
+│   ├── models.py
+│   ├── requirements.txt
+│   ├── scripts                # Python Scripts.
+│   │   └── process_directory.sh
+│   └── swagger.yml
+├── data                        # RAW JSON files for (CVE/MITRE)
+│   ├── db                      # Stores threats.db (Flat Database)
+│   ├── knowledge_graphs        # Knowledge Graphs 
+│   │   └── visualization
+│   │       └── cytoscape
+│   ├── output
+│   └── uploads
+├── docker
+│   └── docker-compose.yml
+└── docs
+    └── curl-cmds.md
 ```
 
 Example .env file:
