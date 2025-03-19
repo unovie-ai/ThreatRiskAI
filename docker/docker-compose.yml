@@ -1,17 +1,17 @@
-version: "3.8"
-
 volumes:
-  db_:
+  threat_vol:
 
 services:
   api:
+    container_name: threatapi
     build:
-      context: ..
+      context: ../app
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ..:/app
+      - ../app:/app
+      - ../data:/data
     environment:
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
@@ -26,9 +26,10 @@ services:
     depends_on:
       - db
   db:
+    container_name: threatdb
     image: "postgres:13"
     volumes:
-      - db_:/var/lib/postgresql/data
+      - threat_vol:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
