@@ -34,7 +34,7 @@ swagger_config = {
     "specs_route": "/apidocs/"
 }
 
-swagger = Swagger(app, template_file='swagger.yml', config=swagger_config)  # Comment out Swagger initialization
+swagger = Swagger(app, config=swagger_config)
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
@@ -240,6 +240,12 @@ def query_database():
     except Exception as e:
         logging.exception("An error occurred during the database query.")
         return jsonify({'error': str(e)}), 500
+
+from flask import send_from_directory
+
+@app.route('/apispec_1.json')
+def serve_swagger_json():
+    return send_from_directory(app.static_folder, 'swagger.yml')
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=8000)
