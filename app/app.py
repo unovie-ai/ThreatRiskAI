@@ -2,6 +2,7 @@ import os
 import logging
 import subprocess
 from flask import Flask, request, jsonify
+import yaml
 from flasgger import Swagger, SwaggerView
 from flasgger.utils import swag_from
 from werkzeug.utils import secure_filename
@@ -37,10 +38,17 @@ swagger_config = {
 swagger = Swagger(app, template_file='swagger.yml', config=swagger_config)
 
 # Define SwaggerView
+import json
+
 class SwaggerSpecView(SwaggerView):
     methods = ['GET']
-    def get(self, **kwargs):
-        return send_from_directory(app.static_folder, 'swagger.yml')
+    def get(self):
+        with open(os.path.join(app.static_folder, 'swagger.yml'), 'r') as f:
+            try:
+                data = yaml.safe_load(f)  # Use safe_load for security
+                return jsonify(data)
+            except yaml.YAMLError as e:
+                return jsonify({'error': str(e)}), 500
 
 app.add_url_rule('/apidocs/', view_func=SwaggerSpecView.as_view('apidocs'))
 
