@@ -34,13 +34,15 @@ swagger_config = {
     "specs_route": "/apidocs/"
 }
 
+swagger = Swagger(app, template_file='swagger.yml', config=swagger_config)
+
 # Define SwaggerView
 class SwaggerSpecView(SwaggerView):
     methods = ['GET']
     def get(self, **kwargs):
         return send_from_directory(app.static_folder, 'swagger.yml')
 
-app.add_url_rule('/apidocs/', view_func=SwaggerSpecView.as_view('apidocs', template_file='swagger.yml'))
+app.add_url_rule('/apidocs/', view_func=SwaggerSpecView.as_view('apidocs'))
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
