@@ -15,7 +15,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
@@ -26,13 +26,14 @@ paths:
                 platform:
                   type: string
                   description: Target platform (e.g., containers, Windows)
-                file_content:
+                file:
                   type: string
-                  description: JSON file content as a string
+                  format: binary
+                  description: The JSON file to upload
               required:
                 - data_type
                 - platform
-                - file_content
+                - file
       responses:
         '200':
           description: File uploaded and processing initiated successfully
