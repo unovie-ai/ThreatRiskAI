@@ -2,12 +2,12 @@ import os
 import logging
 import subprocess
 from flask import Flask, request, jsonify
-from flasgger import Swagger
+from flasgger import Swagger, SwaggerView
 from flasgger.utils import swag_from
 from werkzeug.utils import secure_filename
 import config
 from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
-# from marshmallow import ValidationError  # Comment out marshmallow import
+# from marshmallow import ValidationError
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -34,7 +34,13 @@ swagger_config = {
     "specs_route": "/apidocs/"
 }
 
-swagger = Swagger(app, config=swagger_config)
+# Define SwaggerView
+class SwaggerSpecView(SwaggerView):
+    methods = ['GET']
+    def get(self, **kwargs):
+        return send_from_directory(app.static_folder, 'swagger.yml')
+
+app.add_url_rule('/apidocs/', view_func=SwaggerSpecView.as_view('apidocs', template_file='swagger.yml'))
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
@@ -240,12 +246,6 @@ def query_database():
     except Exception as e:
         logging.exception("An error occurred during the database query.")
         return jsonify({'error': str(e)}), 500
-
-from flask import send_from_directory
-
-@app.route('/apispec_1.json')
-def serve_swagger_json():
-    return send_from_directory(app.static_folder, 'swagger.yml')
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=8000)
