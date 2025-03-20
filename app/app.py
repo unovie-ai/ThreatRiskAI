@@ -34,7 +34,7 @@ swagger_config = {
     "specs_route": "/apidocs/"
 }
 
-swagger = Swagger(app, config=swagger_config)  # Comment out Swagger initialization
+swagger = Swagger(app, template_file='swagger.yml', config=swagger_config)  # Comment out Swagger initialization
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
