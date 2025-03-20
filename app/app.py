@@ -2,11 +2,11 @@ import os
 import logging
 import subprocess
 from flask import Flask, request, jsonify
-# from flasgger import Swagger  # Comment out flasgger import
-# from flasgger.utils import swag_from  # Comment out swag_from import
+from flasgger import Swagger
+from flasgger.utils import swag_from
 from werkzeug.utils import secure_filename
 import config
-# from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema  # Comment out models import
+from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
 # from marshmallow import ValidationError  # Comment out marshmallow import
 
 # Initialize Flask application
@@ -17,25 +17,25 @@ app.config['TRAP_HTTP_EXCEPTIONS'] = True
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# # Swagger configuration  # Comment out Swagger configuration
-# swagger_config = {
-#     "openapi": "3.0.0",
-#     "headers": [
-#     ],
-#     "specs": [
-#         {
-#             "endpoint": 'apispec_1',
-#             "route": '/apispec_1.json',
-#             "rule_filter": lambda rule: True,  # all in
-#             "model_filter": lambda tag: True,  # all in
-#         }
-#     ],
-#     "static_url_path": "/flasgger_static",
-#     "swagger_ui": True,
-#     "specs_route": "/apidocs/"
-# }
+# Swagger configuration
+swagger_config = {
+    "openapi": "3.0.0",
+    "headers": [
+    ],
+    "specs": [
+        {
+            "endpoint": 'apispec_1',
+            "route": '/apispec_1.json',
+            "rule_filter": lambda rule: True,  # all in
+            "model_filter": lambda tag: True,  # all in
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/"
+}
 
-# swagger = Swagger(app, config=swagger_config)  # Comment out Swagger initialization
+swagger = Swagger(app, config=swagger_config)  # Comment out Swagger initialization
 
 # Utility function to check if the file extension is allowed
 def allowed_file(filename):
