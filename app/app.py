@@ -212,14 +212,14 @@ def embed_knowledge_graph():
 def query_database():
     try:
         # Validate request using schema
-        # schema = QueryRequestSchema()  # Comment out schema initialization
-        # try:  # Comment out try-except block
-        #     query_data = schema.load(request.args)
-        # except ValidationError as err:
-        #     return jsonify({'error': err.messages}), 400
+        schema = QueryRequestSchema()  # Comment out schema initialization
+        try:  # Comment out try-except block
+            query_data = schema.load(request.args)
+        except ValidationError as err:
+            return jsonify({'error': err.messages}), 400
 
-        # query = query_data['query']  # Comment out query assignment
-        query = request.args.get('query')
+        query = query_data['query']  # Comment out query assignment
+        # query = request.args.get('query')
 
         # Call scripts/query_databases.py to retrieve results
         command = [
