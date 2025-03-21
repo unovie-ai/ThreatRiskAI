@@ -135,37 +135,32 @@ def generate_knowledge_graph(json_file_path: str, data_type: str, args: argparse
             # For CVE, we already generated the knowledge graph in process_data
             return json_file_path
         else:
-            # For MITRE, use the existing knowledge graph generator
+            # For MITRE, use the new knowledge graph generator
+            from ingestion.mitre_kg_generator import MITREKGGenerator
+            
+            generator = MITREKGGenerator()
+            
+            with open(json_file_path, 'r') as f:
+                data = json.load(f)
+            
+            processed_data = generator.process(data)
+            
+            # Save to CSV
             file_name = os.path.splitext(os.path.basename(json_file_path))[0]
             csv_file_path = os.path.join("knowledge_graphs", f"{file_name}.csv")
-
-            command = [
-                "python",
-                "ingestion/knowledge_graph_generator.py",
-                json_file_path,
-                data_type.lower()
-            ]
-
-            logging.info(f"Executing: {' '.join(command)}")
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            process.wait()
-
-            if process.returncode != 0:
-                logging.error(f"Knowledge graph generator failed with exit code: {process.returncode}")
-                if args.verbose:
-                    logging.debug(f"STDOUT: {stdout.decode()}")
-                    logging.debug(f"STDERR: {stderr.decode()}")
-                return None
-            else:
-                logging.info(stdout.decode())
-                if args.verbose:
-                    logging.debug(f"STDOUT: {stdout.decode()}")
-                    logging.debug(f"STDERR: {stderr.decode()}")
-                return csv_file_path
+            os.makedirs("knowledge_graphs", exist_ok=True)
+            
+            with open(csv_file_path, 'w') as f:
+                if processed_data:
+                    f.write(','.join(processed_data[0].keys()) + '\n')
+                    for row in processed_data:
+                        f.write(','.join(str(v) for v in row.values()) + '\n')
+            
+            logging.info(f"Knowledge graph saved to {csv_file_path}")
+            return csv_file_path
 
     except FileNotFoundError:
-        logging.error("Script not found: scripts/knowledge_graph_generator.py")
+        logging.error(f"File not found: {json_file_path}")
         return None
     except Exception as e:
         logging.error(f"An unexpected error occurred: {str(e)}")
