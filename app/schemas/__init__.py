@@ -1,6 +1,6 @@
+"""API-related Pydantic models."""
 from pydantic import BaseModel
 
-# Pydantic Models for API
 class QueryRequestSchema(BaseModel):
     query: str
 
@@ -17,4 +17,4 @@ class ErrorResponseSchema(BaseModel):
     error: str
 
     class Config:
-        from_attributes = True
+        from_attributes = True 

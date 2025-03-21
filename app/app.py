@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 import config
-from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
+from schemas import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
 # from marshmallow import ValidationError
 
 # Initialize FastAPI application
