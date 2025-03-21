@@ -1,178 +1,126 @@
 import os
 import logging
 import subprocess
-from flask import Flask, request, jsonify
-# from flasgger import Swagger  # Comment out flasgger import
-# from flasgger.utils import swag_from  # Comment out swag_from import
-from werkzeug.utils import secure_filename
+from typing import Optional, List, Dict, Any
+from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+import uvicorn
 import config
-# from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema  # Comment out models import
-# from marshmallow import ValidationError  # Comment out marshmallow import
+from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
+# from marshmallow import ValidationError
 
-# Initialize Flask application
-app = Flask(__name__)
-app.config.from_object(config)
-app.config['TRAP_HTTP_EXCEPTIONS'] = True
+# Initialize FastAPI application
+app = FastAPI(
+    title="Threat Intelligence API",
+    description="API for uploading threat data and querying the threat intelligence database",
+    version="1.0.0"
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# # Swagger configuration  # Comment out Swagger configuration
-# swagger_config = {
-#     "openapi": "3.0.0",
-#     "headers": [
-#     ],
-#     "specs": [
-#         {
-#             "endpoint": 'apispec_1',
-#             "route": '/apispec_1.json',
-#             "rule_filter": lambda rule: True,  # all in
-#             "model_filter": lambda tag: True,  # all in
-#         }
-#     ],
-#     "static_url_path": "/flasgger_static",
-#     "swagger_ui": True,
-#     "specs_route": "/apidocs/"
-# }
+# Request/Response Models
+class UploadQuery(BaseModel):
+    data_type: str = Field(..., description="Type of data (CVE or MITRE)")
+    platform: str = Field(..., description="Target platform (e.g., containers, Windows)")
 
-# swagger = Swagger(app, config=swagger_config)  # Comment out Swagger initialization
+class EmbedJSON(BaseModel):
+    data_type: str = Field(..., description="Type of data (CVE or MITRE)")
+    platform: str = Field(..., description="Target platform")
+    kg_directory: str = Field(..., description="Directory containing the knowledge graph CSV files")
+
+class QueryParams(BaseModel):
+    query: str = Field(..., description="The query string to search the database")
+
+class MessageResponse(BaseModel):
+    message: str
+
+class ErrorResponse(BaseModel):
+    error: str
 
 # Utility function to check if the file extension is allowed
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+def allowed_file(filename: str) -> bool:
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in config.ALLOWED_EXTENSIONS
 
-# API endpoint for file upload
-@app.route('/upload', methods=['POST'])
-# @swag_from({  # Comment out swag_from decorator
-#     'summary': 'Upload a threat data file for processing',
-#     'consumes': ['multipart/form-data'],
-#     'parameters': [
-#         {
-#             'name': 'data_type',
-#             'in': 'formData',
-#             'type': 'string',
-#             'required': True,
-#             'enum': ['CVE', 'MITRE'],
-#             'description': 'Type of data (CVE or MITRE)'
-#         },
-#         {
-#             'name': 'platform',
-#             'in': 'formData',
-#             'type': 'string',
-#             'required': True,
-#             'description': 'Target platform (e.g., containers, Windows)'
-#         },
-#         {
-#             'name': 'file',
-#             'in': 'formData',
-#             'type': 'file',
-#             'required': True,
-#             'description': 'The JSON file to upload'
-#         }
-#     ],
-#     'responses': {
-#         '200': {'description': 'File uploaded and processing initiated successfully'},
-#         '400': {'description': 'Invalid request parameters or file format', 'schema': ErrorResponseSchema},
-#         '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
-#     }
-# })
-def upload_file():
+@app.post(
+    "/upload",
+    response_model=MessageResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    },
+    tags=["Upload"],
+    summary="Upload a threat data file for processing"
+)
+async def upload_file(
+    data_type: str = Form(..., description="Type of data (CVE or MITRE)"),
+    platform: str = Form(..., description="Target platform (e.g., containers, Windows)"),
+    file: UploadFile = File(..., description="The JSON file to upload")
+):
+    """
+    Upload a threat data file for processing
+    """
     try:
-        # Check if the request has the data_type, platform and file part
-        if 'data_type' not in request.form or 'platform' not in request.form or 'file' not in request.files:
-            return jsonify({'error': 'Missing data_type, platform or file'}), 400
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No file selected")
 
-        data_type = request.form['data_type']
-        platform = request.form['platform']
-        file = request.files['file']
+        if not allowed_file(file.filename):
+            raise HTTPException(status_code=400, detail="Invalid file format. Allowed formats are json")
 
-        # Check if the file is one of the allowed types/extensions
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
+        # Save the file
+        file_path = os.path.join(config.UPLOAD_FOLDER, file.filename)
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
 
-            logging.info(f"File saved to: {file_path}")
+        logging.info(f"File saved to: {file_path}")
 
-            # Call main.py to process the uploaded file
-            command = [
-                "python",
-                "main.py",               
-                data_type.upper(),
-                platform,
-                file_path,
-                '-v'
-            ]
-            logging.info(f"Executing: {' '.join(command)}")
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
+        command = [
+            "python",
+            "main.py",               
+            data_type.upper(),
+            platform,
+            file_path,
+            '-v'
+        ]
+        logging.info(f"Executing: {' '.join(command)}")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
 
-            if process.returncode != 0:
-                logging.error(f"Error processing file: {stderr.decode()}")
-                return jsonify({'error': f"File processing failed: {stderr.decode()}"}), 500
+        if process.returncode != 0:
+            error_msg = stderr.decode()
+            logging.error(f"Error processing file: {error_msg}")
+            raise HTTPException(status_code=500, detail=f"File processing failed: {error_msg}")
 
-            logging.info(stdout.decode())
-            return jsonify({'message': 'File uploaded and processing initiated successfully.'}), 200
-        else:
-            return jsonify({'error': 'Invalid file format. Allowed formats are json'}), 400
+        logging.info(stdout.decode())
+        return {"message": "File uploaded and processing initiated successfully."}
 
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logging.exception("An error occurred during file upload and processing.")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-# API endpoint for embedding the knowledge graph
-@app.route('/embed', methods=['POST'])
-# @swag_from({  # Comment out swag_from decorator
-#     'summary': 'Embed the knowledge graph into the database',
-#     'consumes': ['application/json'],
-#     'parameters': [
-#         {
-#             'name': 'data_type',
-#             'in': 'json',
-#             'type': 'string',
-#             'required': True,
-#             'enum': ['CVE', 'MITRE'],
-#             'description': 'Type of data (CVE or MITRE)'
-#         },
-#         {
-#             'name': 'platform',
-#             'in': 'json',
-#             'type': 'string',
-#             'required': True,
-#             'description': 'Target platform (e.g., containers, Windows)'
-#         },
-#         {
-#             'name': 'kg_directory',
-#             'in': 'json',
-#             'type': 'string',
-#             'required': True,
-#             'description': 'Directory containing the knowledge graph CSV files'
-#         }
-#     ],
-#     'responses': {
-#         '200': {'description': 'Knowledge graph embedded successfully'},
-#         '400': {'description': 'Invalid request parameters', 'schema': ErrorResponseSchema},
-#         '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
-#     }
-# })
-def embed_knowledge_graph():
+@app.post(
+    "/embed",
+    response_model=MessageResponse,
+    responses={500: {"model": ErrorResponse}},
+    tags=["Embed"],
+    summary="Embed the knowledge graph into the database"
+)
+async def embed_knowledge_graph(body: EmbedJSON):
+    """
+    Embed the knowledge graph into the database
+    """
     try:
-        data = request.get_json()
-        data_type = data.get('data_type')
-        platform = data.get('platform')
-        kg_directory = data.get('kg_directory')
-
-        if not all([data_type, platform, kg_directory]):
-            return jsonify({'error': 'Missing data_type, platform, or kg_directory'}), 400
-
-        # Call main.py with the embed option
         command = [
             "python",
             "main.py",
             "--embed",
-             data_type.upper(),
-             platform,
-            "--kg-directory", kg_directory,
+            body.data_type.upper(),
+            body.platform,
+            "--kg-directory", body.kg_directory,
             "-v"
         ]
         logging.info(f"Executing: {' '.join(command)}")
@@ -180,48 +128,31 @@ def embed_knowledge_graph():
         stdout, stderr = process.communicate()
 
         if process.returncode != 0:
-            logging.error(f"Error embedding knowledge graph: {stderr.decode()}")
-            return jsonify({'error': f"Knowledge graph embedding failed: {stderr.decode()}"}), 500
+            error_msg = stderr.decode()
+            logging.error(f"Error embedding knowledge graph: {error_msg}")
+            raise HTTPException(status_code=500, detail=f"Knowledge graph embedding failed: {error_msg}")
 
         logging.info(stdout.decode())
-        return jsonify({'message': 'Knowledge graph embedded successfully.'}), 200
+        return {"message": "Knowledge graph embedded successfully."}
 
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logging.exception("An error occurred during knowledge graph embedding.")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-# API endpoint for querying the database
-@app.route('/query', methods=['GET'])
-# @swag_from({  # Comment out swag_from decorator
-#     'summary': 'Query the threat intelligence database',
-#     'parameters': [
-#         {
-#             'name': 'query',
-#             'in': 'query',
-#             'required': 'true',
-#             'type': 'string',
-#             'description': 'The query string to search the database'
-#         }
-#     ],
-#     'responses': {
-#         '200': {'description': 'Successful query', 'schema': QueryResponseSchema},
-#         '400': {'description': 'Query parameter is missing', 'schema': ErrorResponseSchema},
-#         '500': {'description': 'Internal server error', 'schema': ErrorResponseSchema}
-#     }
-# })
-def query_database():
+@app.get(
+    "/query",
+    response_model=Dict[str, str],
+    responses={500: {"model": ErrorResponse}},
+    tags=["Query"],
+    summary="Query the threat intelligence database"
+)
+async def query_database(query: str):
+    """
+    Query the threat intelligence database
+    """
     try:
-        # Validate request using schema
-        # schema = QueryRequestSchema()  # Comment out schema initialization
-        # try:  # Comment out try-except block
-        #     query_data = schema.load(request.args)
-        # except ValidationError as err:
-        #     return jsonify({'error': err.messages}), 400
-
-        # query = query_data['query']  # Comment out query assignment
-        query = request.args.get('query')
-
-        # Call scripts/query_databases.py to retrieve results
         command = [
             "python",
             "inference/query_databases.py",
@@ -232,15 +163,18 @@ def query_database():
         stdout, stderr = process.communicate()
 
         if process.returncode != 0:
-            logging.error(f"Error querying database: {stderr.decode()}")
-            return jsonify({'error': f"Database query failed: {stderr.decode()}"}), 500
+            error_msg = stderr.decode()
+            logging.error(f"Error querying database: {error_msg}")
+            raise HTTPException(status_code=500, detail=f"Database query failed: {error_msg}")
 
         response = stdout.decode().strip()
-        return jsonify({'result': response}), 200
+        return {"result": response}
 
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logging.exception("An error occurred during the database query.")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=8000)
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

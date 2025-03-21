@@ -1,11 +1,20 @@
-from marshmallow import Schema, fields, validate
+from pydantic import BaseModel
 
+# Pydantic Models for API
+class QueryRequestSchema(BaseModel):
+    query: str
 
-class QueryRequestSchema(Schema):
-    query = fields.String(required=True, description="The query string to search the database")
+    class Config:
+        from_attributes = True
 
-class QueryResponseSchema(Schema):
-    result = fields.String(required=True, description="The query result")
+class QueryResponseSchema(BaseModel):
+    result: str
 
-class ErrorResponseSchema(Schema):
-    error = fields.String(required=True, description="Error message")
+    class Config:
+        from_attributes = True
+
+class ErrorResponseSchema(BaseModel):
+    error: str
+
+    class Config:
+        from_attributes = True
