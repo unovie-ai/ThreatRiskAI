@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 import config
-from models import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
+from schemas import QueryRequestSchema, QueryResponseSchema, ErrorResponseSchema
 # from marshmallow import ValidationError
 
 # Initialize FastAPI application
@@ -28,7 +28,6 @@ class UploadQuery(BaseModel):
 class EmbedJSON(BaseModel):
     data_type: str = Field(..., description="Type of data (CVE or MITRE)")
     platform: str = Field(..., description="Target platform")
-    kg_directory: str = Field(..., description="Directory containing the knowledge graph CSV files")
 
 class QueryParams(BaseModel):
     query: str = Field(..., description="The query string to search the database")
@@ -120,7 +119,7 @@ async def embed_knowledge_graph(body: EmbedJSON):
             "--embed",
             body.data_type.upper(),
             body.platform,
-            "--kg-directory", body.kg_directory,
+            "--kg-directory", "knowledge_graphs",
             "-v"
         ]
         logging.info(f"Executing: {' '.join(command)}")

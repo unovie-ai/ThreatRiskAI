@@ -37,20 +37,41 @@ def process_data(json_file_path, data_type, platform, args):
     try:
         if data_type.upper() == "MITRE":
             script_path = "ingestion/mitre_processor.py"
+            # For MITRE, use the existing approach
+            command = [
+                sys.executable,
+                script_path,
+                json_file_path,
+                platform,
+                "--output_dir", OUTPUT_DIR
+            ]
         elif data_type.upper() == "CVE":
-            script_path = "ingestion/cve_processor.py"
+            # For CVE, use our new processor approach
+            from ingestion.cve_processor import CVEProcessor
+            processor = CVEProcessor()
+            
+            with open(json_file_path, 'r') as f:
+                data = json.load(f)
+            
+            # Process the data
+            processed_data = processor.process(data)
+            
+            # Save to CSV directly
+            csv_file_path = os.path.join("knowledge_graphs", f"{os.path.splitext(file_name)[0]}.csv")
+            os.makedirs("knowledge_graphs", exist_ok=True)
+            
+            with open(csv_file_path, 'w') as f:
+                if processed_data:
+                    f.write(','.join(processed_data[0].keys()) + '\n')
+                    for row in processed_data:
+                        f.write(','.join(str(v) for v in row.values()) + '\n')
+            
+            logging.info(f"Processed data saved to {csv_file_path}")
+            return csv_file_path
         else:
             raise ValueError("Invalid data_type. Must be 'MITRE' or 'CVE'.")
 
-        # Construct the command to execute the script
-        command = [
-            sys.executable,
-            script_path,
-            json_file_path,
-            platform,
-            "--output_dir", OUTPUT_DIR
-        ]
-
+        # Execute the command for MITRE processing
         logging.info(f"Executing: {' '.join(command)}")
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
@@ -69,7 +90,6 @@ def process_data(json_file_path, data_type, platform, args):
             logging.debug(f"STDERR: {stderr.decode()}")
 
         # For MITRE, process_mitre returns a list of file paths
-        # For CVE, process_cve returns a single file path (or None)
         if data_type.upper() == "MITRE":
             raw_output = stdout.decode()
             logging.debug(f"Raw output from MITRE processor: {raw_output}")
@@ -85,7 +105,7 @@ def process_data(json_file_path, data_type, platform, args):
                 logging.error(f"Could not decode JSON from MITRE processor's output: {raw_output}")
                 return None
         else:
-            # For CVE, return the single output file path
+            # For CVE, return the output file path
             return output_file_path
 
     except ValueError as e:
@@ -111,37 +131,36 @@ def generate_knowledge_graph(json_file_path: str, data_type: str, args: argparse
         str: The path to the generated CSV file, or None if an error occurred.
     """
     try:
-        # Extract filename from path
-        file_name = os.path.splitext(os.path.basename(json_file_path))[0]
-        csv_file_path = os.path.join("knowledge_graphs", f"{file_name}.csv")
-
-        command = [
-            "python",
-            "ingestion/knowledge_graph_generator.py",
-            json_file_path,
-            data_type.lower()
-        ]
-
-        logging.info(f"Executing: {' '.join(command)}")
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        process.wait() # Wait for the process to finish and get return code
-
-        if process.returncode != 0: # Check return code instead of stdout/stderr
-            logging.error(f"Knowledge graph generator failed with exit code: {process.returncode}")
-            if args.verbose:
-                logging.debug(f"STDOUT: {stdout.decode()}")
-                logging.debug(f"STDERR: {stderr.decode()}")
-            return None
+        if data_type.upper() == "CVE":
+            # For CVE, we already generated the knowledge graph in process_data
+            return json_file_path
         else:
-            logging.info(stdout.decode())
-            if args.verbose:
-                logging.debug(f"STDOUT: {stdout.decode()}")
-                logging.debug(f"STDERR: {stderr.decode()}")
+            # For MITRE, use the new knowledge graph generator
+            from ingestion.mitre_kg_generator import MITREKGGenerator
+            
+            generator = MITREKGGenerator()
+            
+            with open(json_file_path, 'r') as f:
+                data = json.load(f)
+            
+            processed_data = generator.process(data)
+            
+            # Save to CSV
+            file_name = os.path.splitext(os.path.basename(json_file_path))[0]
+            csv_file_path = os.path.join("knowledge_graphs", f"{file_name}.csv")
+            os.makedirs("knowledge_graphs", exist_ok=True)
+            
+            with open(csv_file_path, 'w') as f:
+                if processed_data:
+                    f.write(','.join(processed_data[0].keys()) + '\n')
+                    for row in processed_data:
+                        f.write(','.join(str(v) for v in row.values()) + '\n')
+            
+            logging.info(f"Knowledge graph saved to {csv_file_path}")
             return csv_file_path
 
     except FileNotFoundError:
-        logging.error("Script not found: scripts/knowledge_graph_generator.py")
+        logging.error(f"File not found: {json_file_path}")
         return None
     except Exception as e:
         logging.error(f"An unexpected error occurred: {str(e)}")
