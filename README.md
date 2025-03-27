@@ -18,20 +18,12 @@ Threat Risk Assessment for SBOM using GENAI
 
 ## Getting Started
 
-1.  **Clone the repository:**
+**Clone the repository:**
 
     ```bash
     git clone https://github.com/unovie-ai/ThreatRiskAI.git
     cd ThreatRiskAI
     ```
-
-2.  **Run the application using Docker Compose:**
-
-    ```bash
-    docker-compose up -d
-    ```
-
-    This command will start the application and its dependencies defined in `docker-compose.yml`. The `-d` flag runs the containers in detached mode.
 
 ## Project Structure
 
@@ -41,15 +33,11 @@ Threat Risk Assessment for SBOM using GENAI
 ├── README.md
 ├── app
 │   ├── Dockerfile
-│   ├── __pycache__
-│   │   └── config.cpython-311.pyc
 │   ├── app.py
 │   ├── config.py
 │   ├── inference
-│   │   ├── __init__.py
 │   │   └── query_databases.py
 │   ├── ingestion
-│   │   ├── __init__.py
 │   │   ├── cve_processor.py
 │   │   ├── db_updater.py
 │   │   ├── db_updater_row.py
@@ -71,10 +59,13 @@ Threat Risk Assessment for SBOM using GENAI
 ├── docker
 │   └── docker-compose.yml
 └── docs
-    └── curl-cmds.md
+    └── project-details.md 
+    └── technical-architecture.md 
 ```
 
-Example .env file:
+## Setup Environment.
+In docker/ folder rename env.example to .env
+
 ```
 LLM_MODEL=gemini-2.0-flash-exp
 NUM_RESULTS=10
@@ -89,6 +80,7 @@ EMBEDDING_MODEL=jina-embeddings-v2-small-en
     If you make changes to the `Dockerfile`, rebuild the image:
 
     ```bash
+    cd docker/
     docker-compose build
     ```
 
