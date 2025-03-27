@@ -16,6 +16,25 @@ Threat Risk Assessment for SBOM using GENAI
 *   Develop a visualization tool to display the knowledge graph and relationships.
 *   Integrate a Generative AI model to answer complex threat-related questions.
 
+## Getting Started
+
+1.  **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/unovie-ai/ThreatRiskAI.git
+    cd ThreatRiskAI
+    ```
+
+2.  **Install dependencies:**
+
+    ```bash
+    # You may need to create a virtual environment first:
+    # python -m venv .venv
+    # source .venv/bin/activate  # On Linux/macOS
+    # .venv\Scripts\activate    # On Windows
+    pip install -r requirements.txt
+    ```
+
 ## Project Structure
 
 ```
