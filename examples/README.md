@@ -10,9 +10,8 @@ These examples are designed to be used with the API endpoints described below. F
 
 The upload endpoint allows you to upload a JSON file for processing.
 
-**Endpoint:** `/upload`
-
-**Method:** POST
+*   **Endpoint:** `/upload`
+*   **Method:** `POST`
 
 **Example `curl` request:**
 
@@ -25,7 +24,7 @@ curl -X POST \
   -F file=@cve/CVE-2024-47616.json
 ```
 
-   or
+or
 
 ```bash
 curl -X POST \
@@ -40,9 +39,8 @@ curl -X POST \
 
 The embed endpoint allows you to embed the knowledge graph into the database.
 
-**Endpoint:** `/embed`
-
-**Method:** POST
+*   **Endpoint:** `/embed`
+*   **Method:** `POST`
 
 **Example `curl` request:**
 
@@ -56,7 +54,7 @@ curl -X POST \
   }'
 ```
 
-   or
+or
 
 ```bash
 curl -X POST \
@@ -72,9 +70,8 @@ curl -X POST \
 
 The query endpoint allows you to query the threat intelligence database.
 
-**Endpoint:** `/query`
-
-**Method:** GET
+*   **Endpoint:** `/query`
+*   **Method:** `GET`
 
 **Example `curl` request:**
 
