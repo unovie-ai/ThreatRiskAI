@@ -82,39 +82,33 @@ EMBEDDING_MODEL=jina-embeddings-v2-small-en
     *   Replace `.env` with the path to your environment variables file if it's located elsewhere.
     *   This command maps port 8000 of the container to port 8000 on your host machine.
 
-## Usage
+## Usage (Docker Environment)
 
-### Processing Data and Generating Knowledge Graphs
+### Uploading Data and Processing
 
-To process a directory of CVE or MITRE data and generate knowledge graphs, use the
-`scripts/process_directory.sh` script:
+1.  **Upload a CVE or MITRE JSON file:**
 
-```bash
-./scripts/process_directory.sh /path/to/data CVE containers
-```
+    Use the `/upload` endpoint of the API.  For example, using `curl`:
 
-This command will process all JSON files in `/path/to/data` as CVE data, filtering for the "containers"
-platform. The knowledge graphs will be generated in the `knowledge_graphs` directory.
-
-### Creating Embeddings and Storing in Database
-
-To create embeddings of the knowledge graphs in CSV format and store them in a database, use the
-`main.py` script with the `--embed` and `--kg-directory` options:
-
-```bash
-python main.py CVE containers --embed --kg-directory knowledge_graphs
-```
-
-This command will create embeddings for the CVE data, filtering for the "containers" platform, using the
-knowledge graphs located in the `knowledge_graphs` directory. The embeddings will be stored in a
-database named `cve.db`.
+    ```bash
+    curl -X POST -F "data_type=CVE" -F "platform=containers" -F "file=@/path/to/your/cve.json" http://localhost:8000/upload
+    ```
+    Replace `/path/to/your/cve.json` with the actual path to your JSON file *within the host machine*. The file will be processed inside the container.
 
 ### Querying the API
 
-After running the application, you can query the API using tools like `curl` or `Postman`.  Example:
+1.  **Query the API:**
 
-```bash
-curl -X GET "http://localhost:8000/query?query=what are the cves related to containers?"
-```
+    ```bash
+    curl "http://localhost:8000/query?query=what are the cves related to containers?"
+    ```
 
-This will query the threat intelligence database for CVEs related to containers.  The API will return a JSON response with the results.
+    This will query the threat intelligence database for CVEs related to containers. The API will return a JSON response with the results.
+
+### Embedding Knowledge Graphs
+
+1.  **Embed the knowledge graph into the database:**
+
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{"data_type": "CVE", "platform": "containers"}' http://localhost:8000/embed
+    ```
