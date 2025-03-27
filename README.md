@@ -25,15 +25,13 @@ Threat Risk Assessment for SBOM using GENAI
     cd ThreatRiskAI
     ```
 
-2.  **Install dependencies:**
+2.  **Run the application using Docker Compose:**
 
     ```bash
-    # You may need to create a virtual environment first:
-    # python -m venv .venv
-    # source .venv/bin/activate  # On Linux/macOS
-    # .venv\Scripts\activate    # On Windows
-    pip install -r requirements.txt
+    docker-compose up -d
     ```
+
+    This command will start the application and its dependencies defined in `docker-compose.yml`. The `-d` flag runs the containers in detached mode.
 
 ## Project Structure
 
