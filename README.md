@@ -91,6 +91,14 @@ EMBEDDING_MODEL=jina-embeddings-v2-small-en
 
 ## Usage (Docker Environment)
 
+### Accessing the API Documentation (Swagger)
+
+The API documentation is available via Swagger at:
+
+```
+http://localhost:8000/docs
+```
+
 ### Uploading Data and Processing
 
 1.  **Upload a CVE or MITRE JSON file:**
