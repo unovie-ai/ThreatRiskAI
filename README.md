@@ -67,20 +67,27 @@ EMBEDDING_MODEL=jina-embeddings-v2-small-en
 
 ## Docker Instructions
 
-1.  **Build the Docker image:**
+1.  **Build the Docker image (if needed):**
+
+    If you make changes to the `Dockerfile`, rebuild the image:
 
     ```bash
-    docker build -t threatriskaiapp .
+    docker-compose build
     ```
 
-2.  **Run the Docker container:**
+2.  **Run the application using Docker Compose:**
 
     ```bash
-    docker run -d -p 8000:8000 --env-file .env threatriskaiapp
+    docker-compose up -d
     ```
 
-    *   Replace `.env` with the path to your environment variables file if it's located elsewhere.
-    *   This command maps port 8000 of the container to port 8000 on your host machine.
+    This command will start the application and its dependencies defined in `docker-compose.yml`. The `-d` flag runs the containers in detached mode.
+
+3.  **Stop the application:**
+
+    ```bash
+    docker-compose down
+    ```
 
 ## Usage (Docker Environment)
 
