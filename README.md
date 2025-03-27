@@ -127,3 +127,13 @@ http://localhost:8000/docs
     ```bash
     curl -X POST -H "Content-Type: application/json" -d '{"data_type": "CVE", "platform": "containers"}' http://localhost:8000/embed
     ```
+
+### Running Examples
+
+1.  **Navigate to the `examples` directory:**
+
+    ```bash
+    cd examples
+    ```
+
+2.  **Follow the instructions in the `examples/README.md` file.**  (Assuming this file exists and contains instructions on how to run the examples.)
