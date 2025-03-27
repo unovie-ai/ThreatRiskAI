@@ -1,5 +1,6 @@
 # ThreatRiskAI
-Threat Risk Assessment for SBOM using GENAI
+
+Threat Risk Assessment for SBOM using GENAI. Built as a Security Project by a team security master students.
 
 ## Project Goals
 
